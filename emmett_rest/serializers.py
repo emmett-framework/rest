@@ -9,7 +9,7 @@
     :license: BSD-3-Clause
 """
 
-from weppy.orm.objects import Rows
+from emmett.orm.objects import Rows
 
 
 class Serializer:

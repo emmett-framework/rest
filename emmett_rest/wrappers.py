@@ -10,21 +10,26 @@
 """
 
 from functools import wraps
-from typing import Callable, Generic, List, Optional
+from typing import Callable, List, Optional, Type
+
+from emmett import App
+from emmett.extensions import Extension
 
 from .helpers import DEFAULT
+from .rest import AppModule, RESTModule
+from .typing import ModelType, ParserType, SerializerType
 
 
-def wrap_module_from_app(ext: Generic) -> Callable[..., Generic]:
+def wrap_module_from_app(ext: Extension) -> Callable[..., RESTModule]:
     def rest_module_from_app(
-        app: Generic,
+        app: App,
         import_name: str,
         name: str,
-        model: Generic,
-        serializer: Optional[Generic] = None,
-        parser: Optional[Generic] = None,
-        enabled_methods: Optional[List] = None,
-        disabled_methods: Optional[List] = None,
+        model: ModelType,
+        serializer: Optional[SerializerType] = None,
+        parser: Optional[ParserType] = None,
+        enabled_methods: Optional[List[str]] = None,
+        disabled_methods: Optional[List[str]] = None,
         list_envelope: Optional[str] = None,
         single_envelope: Optional[str] = DEFAULT,
         meta_envelope: Optional[str] = DEFAULT,
@@ -32,8 +37,8 @@ def wrap_module_from_app(ext: Generic) -> Callable[..., Generic]:
         serialize_meta: Optional[bool] = None,
         url_prefix: Optional[str] = None,
         hostname: Optional[str] = None,
-        module_class: Optional[Generic] = None
-    ) -> Generic:
+        module_class: Optional[Type[RESTModule]] = None
+    ) -> RESTModule:
         module_class = module_class or ext.config.default_module_class
         return module_class.from_app(
             ext, import_name, name, model, serializer, parser,
@@ -45,16 +50,16 @@ def wrap_module_from_app(ext: Generic) -> Callable[..., Generic]:
     return rest_module_from_app
 
 
-def wrap_module_from_module(ext: Generic) -> Callable[..., Generic]:
+def wrap_module_from_module(ext: Extension) -> Callable[..., RESTModule]:
     def rest_module_from_module(
-        mod: Generic,
+        mod: AppModule,
         import_name: str,
         name: str,
-        model: Generic,
-        serializer: Optional[Generic] = None,
-        parser: Optional[Generic] = None,
-        enabled_methods: Optional[List] = None,
-        disabled_methods: Optional[List] = None,
+        model: ModelType,
+        serializer: Optional[SerializerType] = None,
+        parser: Optional[ParserType] = None,
+        enabled_methods: Optional[List[str]] = None,
+        disabled_methods: Optional[List[str]] = None,
         list_envelope: Optional[str] = None,
         single_envelope: Optional[str] = DEFAULT,
         meta_envelope: Optional[str] = DEFAULT,
@@ -62,8 +67,8 @@ def wrap_module_from_module(ext: Generic) -> Callable[..., Generic]:
         serialize_meta: Optional[bool] = None,
         url_prefix: Optional[str] = None,
         hostname: Optional[str] = None,
-        module_class: Optional[Generic] = None
-    ) -> Generic:
+        module_class: Optional[Type[RESTModule]] = None
+    ) -> RESTModule:
         module_class = module_class or ext.config.default_module_class
         return module_class.from_module(
             ext, mod, import_name, name, model, serializer, parser,

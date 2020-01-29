@@ -12,7 +12,7 @@
 from emmett.extensions import Extension, listen_signal
 from emmett.orm.models import MetaModel
 
-from .appmodule import AppModule, RESTModule
+from .rest import AppModule, RESTModule
 from .parsers import Parser
 from .serializers import Serializer
 from .wrappers import (

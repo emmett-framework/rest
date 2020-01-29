@@ -14,9 +14,10 @@ from __future__ import annotations
 import operator
 
 from emmett import AppModule, Pipe, request, response, sdict
+from emmett.extensions import Extension
 from emmett.tools import ServicePipe
 from functools import reduce
-from typing import Generic, List, Optional
+from typing import List, Optional
 
 from .helpers import DEFAULT, RecordFetcher, SetFetcher
 from .parsers import (
@@ -25,6 +26,7 @@ from .parsers import (
 )
 from .queries import JSONQueryPipe
 from .serializers import serialize as _serialize
+from .typing import ModelType, ParserType, SerializerType
 
 
 class RESTModule(AppModule):
@@ -33,12 +35,12 @@ class RESTModule(AppModule):
     @classmethod
     def from_app(
         cls,
-        ext: Generic,
+        ext: Extension,
         import_name: str,
         name: str,
-        model: Generic,
-        serializer: Optional[Generic] = None,
-        parser: Optional[Generic] = None,
+        model: ModelType,
+        serializer: Optional[SerializerType] = None,
+        parser: Optional[ParserType] = None,
         enabled_methods: Optional[List] = None,
         disabled_methods: Optional[List] = None,
         list_envelope: Optional[str] = None,
@@ -60,13 +62,13 @@ class RESTModule(AppModule):
     @classmethod
     def from_module(
         cls,
-        ext: Generic,
+        ext: Extension,
         mod: AppModule,
         import_name: str,
         name: str,
-        model: Generic,
-        serializer: Optional[Generic] = None,
-        parser: Optional[Generic] = None,
+        model: ModelType,
+        serializer: Optional[SerializerType] = None,
+        parser: Optional[ParserType] = None,
         enabled_methods: Optional[List] = None,
         disabled_methods: Optional[List] = None,
         list_envelope: Optional[str] = None,
