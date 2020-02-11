@@ -23,7 +23,7 @@ class ModulePipe(Pipe):
 class SetFetcher(ModulePipe):
     async def pipe_request(self, next_pipe, **kwargs):
         kwargs['dbset'] = self.mod._fetcher_method()
-        return next_pipe(**kwargs)
+        return await next_pipe(**kwargs)
 
 
 class RecordFetcher(ModulePipe):
@@ -32,7 +32,7 @@ class RecordFetcher(ModulePipe):
         if not kwargs['row']:
             response.status = 404
             return self.mod.error_404()
-        return next_pipe(**kwargs)
+        return await next_pipe(**kwargs)
 
     def fetch_record(self, kwargs):
         kwargs['row'] = self.mod._select_method(

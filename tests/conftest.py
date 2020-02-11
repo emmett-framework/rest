@@ -6,9 +6,12 @@ import pytest
 from emmett import App, sdict
 from emmett.asgi.loops import loops
 from emmett.orm import Database
+from emmett.orm.migrations.engine import Engine
 from emmett.orm.migrations.generation import Generator
 from emmett.orm.migrations.operations import MigrationOp
+from emmett.parsers import Parsers
 from emmett.serializers import Serializers
+from emmett_rest import REST
 
 
 class DynamicGenerator(Generator):
@@ -19,6 +22,11 @@ class DynamicGenerator(Generator):
 @pytest.fixture(scope='session')
 def json_dump():
     return Serializers.get_for('json')
+
+
+@pytest.fixture(scope='session')
+def json_load():
+    return Parsers.get_for('json')
 
 
 @pytest.yield_fixture(scope='session')
@@ -43,23 +51,25 @@ def db_config():
 def app(event_loop, db_config):
     rv = App(__name__)
     rv.config.db = db_config
+    rv.use_extension(REST)
     return rv
 
 
-def _db_up(db):
+def _db_up(db, engine):
     upgrade_ops = DynamicGenerator.generate_from(db, None, None)
     migration = MigrationOp('test', upgrade_ops, upgrade_ops.reverse(), 'test')
-    migration.engine = db
     with db.connection():
-        for op in migration.upgrade_ops:
+        for op in migration.upgrade_ops.ops:
+            op.engine = engine
             op.run()
     return migration
 
 
-def _db_teardown_generator(db, migration):
+def _db_teardown_generator(db, engine, migration):
     def teardown():
         with db.connection():
-            for op in migration.downgrade_ops:
+            for op in migration.downgrade_ops.ops:
+                op.engine = engine
                 op.run()
     return teardown
 
@@ -75,7 +85,8 @@ def migration_db(request, app):
     def generator(*models):
         rv = Database(app)
         rv.define_models(*models)
-        migration = _db_up(rv)
-        request.addfinalizer(_db_teardown_generator(rv, migration))
+        engine = Engine(rv)
+        migration = _db_up(rv, engine)
+        request.addfinalizer(_db_teardown_generator(rv, engine, migration))
         return rv
     return generator

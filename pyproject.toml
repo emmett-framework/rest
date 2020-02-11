@@ -27,7 +27,6 @@ packages = [
     {include = "emmett_rest"}
 ]
 include = [
-    "CHANGES.md",
     "LICENSE"
 ]
 

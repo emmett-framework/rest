@@ -15,7 +15,7 @@ import operator
 
 from emmett import AppModule, Pipe, request, response, sdict
 from emmett.extensions import Extension
-from emmett.tools import ServicePipe
+from emmett.tools.service import JSONServicePipe
 from functools import reduce
 from typing import List, Optional
 
@@ -116,15 +116,15 @@ class RESTModule(AppModule):
         add_service_pipe = True
         super_pipeline = list(pipeline)
         if any(
-            isinstance(pipe, ServicePipe) for pipe in ext.app.pipeline
+            isinstance(pipe, JSONServicePipe) for pipe in ext.app.pipeline
         ) or any(
-            isinstance(pipe, ServicePipe) for pipe in super_pipeline
+            isinstance(pipe, JSONServicePipe) for pipe in super_pipeline
         ):
             add_service_pipe = False
         if add_service_pipe:
-            super_pipeline.insert(0, ServicePipe('json'))
+            super_pipeline.insert(0, JSONServicePipe())
         #: initialize
-        super(RESTModule, self).__init__(
+        super().__init__(
             ext.app, name, import_name,
             url_prefix=url_prefix,
             hostname=hostname,
@@ -171,7 +171,11 @@ class RESTModule(AppModule):
         )
         self.use_envelope_on_parse = (
             use_envelope_on_parse if use_envelope_on_parse is not None else
-            self.config.use_envelope_on_parse
+            self.ext.config.use_envelope_on_parse
+        )
+        self.serialize_meta = (
+            serialize_meta if serialize_meta is not None else
+            self.ext.config.serialize_meta
         )
         self._queryable_fields = []
         self._sortable_fields = []
@@ -196,7 +200,8 @@ class RESTModule(AppModule):
         #: adjust single row serialization based on evenlope
         self.serialize_many = (
             self.serialize_with_list_envelope_and_meta if self.serialize_meta
-            else self.serialize_with_list_envelope)
+            else self.serialize_with_list_envelope
+        )
         if self.single_envelope:
             self.serialize_one = self.serialize_with_single_envelope
             if self.use_envelope_on_parse:
@@ -305,7 +310,7 @@ class RESTModule(AppModule):
     ):
         return {
             self.list_envelope: self.serialize(data, **extras),
-            self.meta_envelope: self.build_meta
+            self.meta_envelope: self.build_meta(dbset, pagination)
         }
 
     def serialize_with_single_envelope(self, data, **extras):
@@ -359,18 +364,6 @@ class RESTModule(AppModule):
             return self.error_404()
         return {}
 
-    #: props
-    @property
-    def pipeline(self) -> List[Pipe]:
-        return self._pipeline
-
-    @pipeline.setter
-    def pipeline(self, val: List[Pipe]):
-        raise RuntimeError(
-            'Cannot change the pipeline of REST modules directly.'
-            'Please use an upper module for this.'
-        )
-
     @property
     def allowed_sorts(self) -> List[str]:
         return self._sortable_fields
@@ -389,7 +382,7 @@ class RESTModule(AppModule):
     @query_allowed_fields.setter
     def query_allowed_fields(self, val: List[str]):
         self._queryable_fields = val
-        self._jsonquery_pipe.set_accepted()
+        self._json_query_pipe.set_accepted()
 
     #: decorators
     def get_dbset(self, f):
