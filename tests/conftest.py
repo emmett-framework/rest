@@ -41,6 +41,7 @@ def db_config():
     config = sdict()
     config.adapter = 'postgres:psycopg2'
     config.host = os.environ.get('POSTGRES_HOST', 'localhost')
+    config.port = int(os.environ.get('POSTGRES_PORT', 5432))
     config.user = os.environ.get('POSTGRES_USER', 'postgres')
     config.password = os.environ.get('POSTGRES_PASSWORD', 'postgres')
     config.database = os.environ.get('POSTGRES_DB', 'test')
