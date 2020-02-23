@@ -32,7 +32,7 @@ include = [
 
 [tool.poetry.dependencies]
 python = "^3.7"
-emmett = "2.0.0a3"
+emmett = "2.0.0a5"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.3"
