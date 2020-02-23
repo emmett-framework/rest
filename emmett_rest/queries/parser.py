@@ -16,8 +16,9 @@ import operator
 from emmett import sdict
 from emmett.orm.objects import Expression, Query, Set as DBSet
 from functools import reduce
-from typing import Any, Callable, Dict, Generic, Optional, Set, Union
+from typing import Any, Callable, Dict, Optional, Set, Union
 
+from ..typing import ModelType
 from .errors import QueryError
 from .validation import op_validators
 
@@ -42,7 +43,7 @@ _query_operators = {
 }
 
 
-def _glue_op_parser(key, value, ctx) -> Expression:
+def _glue_op_parser(key: str, value: Any, ctx: sdict) -> Expression:
     if not isinstance(value, list):
         raise QueryError(op=key, value=value)
     op = _query_operators[key]
@@ -65,7 +66,7 @@ def _dict_op_parser(key: str, value: Any, ctx: sdict) -> Expression:
         ctx.op_set, ctx.op_validators, ctx.op_parsers,
         ctx.model, value, ctx.accepted_set,
         parent=key)
-    return op(inner)
+    return op(None, inner)
 
 
 def _generic_op_parser(key: str, value: Any, ctx: sdict) -> Expression:
@@ -92,7 +93,7 @@ def _conditions_parser(
     op_set: Set[str],
     op_validators: Dict[str, Callable[[Any], Any]],
     op_parsers: Dict[str, Callable[[str, Any, sdict], Any]],
-    model: Generic,
+    model: ModelType,
     query_dict: Dict[str, Any],
     accepted_set: Set[str],
     parent: Optional[str] = None
@@ -138,11 +139,11 @@ def _conditions_parser(
 def _build_scoped_conditions_parser(
     op_validators: Dict[str, Callable[[Any], Any]],
     op_parsers: Dict[str, Callable[[str, Any, sdict], Any]]
-) -> Callable[[Generic, DBSet, Dict[str, Any], Set[str]], DBSet]:
+) -> Callable[[ModelType, DBSet, Dict[str, Any], Set[str]], DBSet]:
     op_set = set(op_validators.keys())
 
     def scoped(
-        model: Generic,
+        model: ModelType,
         dbset: DBSet,
         query_dict: Dict[str, Any],
         accepted_set: Set[str]

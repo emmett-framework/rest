@@ -9,14 +9,16 @@
     :license: BSD-3-Clause
 """
 
+from typing import List, Optional
+
 from emmett.orm.objects import Rows
 
 
 class Serializer:
-    attributes = []
-    include = []
-    exclude = []
-    bind_to = None
+    attributes: List[str] = []
+    include: List[str] = []
+    exclude: List[str] = []
+    bind_to: Optional[str] = None
 
     def __init__(self, model):
         self._model = model

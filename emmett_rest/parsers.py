@@ -10,6 +10,8 @@
 """
 
 from collections import OrderedDict
+from typing import List, Optional
+
 from emmett import request, sdict
 from emmett.utils import cachedprop
 
@@ -83,10 +85,10 @@ class MetaParser(type):
 
 
 class Parser(metaclass=MetaParser):
-    attributes = []
-    include = []
-    exclude = []
-    envelope = None
+    attributes: List[str] = []
+    include: List[str] = []
+    exclude: List[str] = []
+    envelope: Optional[str] = None
 
     def __init__(self, model):
         self._model = model
