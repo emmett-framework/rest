@@ -12,8 +12,6 @@
 from emmett import response
 from emmett.pipeline import Pipe
 
-DEFAULT = lambda: None
-
 
 class ModulePipe(Pipe):
     def __init__(self, mod):

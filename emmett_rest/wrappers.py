@@ -10,12 +10,11 @@
 """
 
 from functools import wraps
-from typing import Callable, List, Optional, Type
+from typing import Callable, List, Optional, Type, Union
 
 from emmett import App
 from emmett.extensions import Extension
 
-from .helpers import DEFAULT
 from .rest import AppModule, RESTModule
 from .typing import ModelType, ParserType, SerializerType
 
@@ -31,8 +30,8 @@ def wrap_module_from_app(ext: Extension) -> Callable[..., RESTModule]:
         enabled_methods: Optional[List[str]] = None,
         disabled_methods: Optional[List[str]] = None,
         list_envelope: Optional[str] = None,
-        single_envelope: Optional[str] = DEFAULT,
-        meta_envelope: Optional[str] = DEFAULT,
+        single_envelope: Optional[Union[str, bool]] = None,
+        meta_envelope: Optional[str] = None,
         use_envelope_on_parse: Optional[bool] = None,
         serialize_meta: Optional[bool] = None,
         url_prefix: Optional[str] = None,
@@ -61,8 +60,8 @@ def wrap_module_from_module(ext: Extension) -> Callable[..., RESTModule]:
         enabled_methods: Optional[List[str]] = None,
         disabled_methods: Optional[List[str]] = None,
         list_envelope: Optional[str] = None,
-        single_envelope: Optional[str] = DEFAULT,
-        meta_envelope: Optional[str] = DEFAULT,
+        single_envelope: Optional[Union[str, bool]] = None,
+        meta_envelope: Optional[str] = None,
         use_envelope_on_parse: Optional[bool] = None,
         serialize_meta: Optional[bool] = None,
         url_prefix: Optional[str] = None,

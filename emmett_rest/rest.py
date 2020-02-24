@@ -13,13 +13,15 @@ from __future__ import annotations
 
 import operator
 
-from emmett import AppModule, Pipe, request, response, sdict
-from emmett.extensions import Extension
-from emmett.tools.service import JSONServicePipe
 from functools import reduce
-from typing import List, Optional
+from typing import Callable, List, Optional, Union
 
-from .helpers import DEFAULT, RecordFetcher, SetFetcher
+from emmett import AppModule, request, response, sdict
+from emmett.extensions import Extension
+from emmett.orm.objects import Row, Set as DBSet
+from emmett.tools.service import JSONServicePipe
+
+from .helpers import RecordFetcher, SetFetcher
 from .parsers import (
     parse_params as _parse_params,
     parse_params_with_parser as _parse_params_wparser
@@ -44,8 +46,8 @@ class RESTModule(AppModule):
         enabled_methods: Optional[List] = None,
         disabled_methods: Optional[List] = None,
         list_envelope: Optional[str] = None,
-        single_envelope: Optional[str] = DEFAULT,
-        meta_envelope: Optional[str] = DEFAULT,
+        single_envelope: Optional[Union[str, bool]] = None,
+        meta_envelope: Optional[str] = None,
         use_envelope_on_parse: Optional[bool] = None,
         serialize_meta: Optional[bool] = None,
         url_prefix: Optional[str] = None,
@@ -72,8 +74,8 @@ class RESTModule(AppModule):
         enabled_methods: Optional[List] = None,
         disabled_methods: Optional[List] = None,
         list_envelope: Optional[str] = None,
-        single_envelope: Optional[str] = DEFAULT,
-        meta_envelope: Optional[str] = DEFAULT,
+        single_envelope: Optional[Union[str, bool]] = None,
+        meta_envelope: Optional[str] = None,
         use_envelope_on_parse: Optional[bool] = None,
         serialize_meta: Optional[bool] = None,
         url_prefix: Optional[str] = None,
@@ -100,7 +102,7 @@ class RESTModule(AppModule):
     def __init__(
         self, ext, name, import_name, model, serializer=None, parser=None,
         enabled_methods=None, disabled_methods=None,
-        list_envelope=None, single_envelope=DEFAULT, meta_envelope=DEFAULT,
+        list_envelope=None, single_envelope=None, meta_envelope=None,
         use_envelope_on_parse=None, serialize_meta=None,
         url_prefix=None, hostname=None, pipeline=[]
     ):
@@ -112,6 +114,13 @@ class RESTModule(AppModule):
         self.error_404 = self.build_error_404
         self.error_422 = self.build_error_422
         self.build_meta = self._build_meta
+        #: callbacks
+        self._before_create_callbacks = []
+        self._before_update_callbacks = []
+        self._after_params_callbacks = []
+        self._after_create_callbacks = []
+        self._after_update_callbacks = []
+        self._after_delete_callbacks = []
         #: service pipe injection
         add_service_pipe = True
         super_pipeline = list(pipeline)
@@ -162,11 +171,11 @@ class RESTModule(AppModule):
         ))
         self.list_envelope = list_envelope or self.ext.config.list_envelope
         self.single_envelope = (
-            single_envelope if single_envelope is not DEFAULT else
+            single_envelope if single_envelope is not None else
             self.ext.config.single_envelope
         )
         self.meta_envelope = (
-            meta_envelope if meta_envelope is not DEFAULT else
+            meta_envelope if meta_envelope is not None else
             self.ext.config.meta_envelope
         )
         self.use_envelope_on_parse = (
@@ -231,10 +240,10 @@ class RESTModule(AppModule):
             f = getattr(self, "_" + key)
             self.route(path, pipeline=pipeline, methods=methods, name=key)(f)
 
-    def _get_dbset(self):
+    def _get_dbset(self) -> DBSet:
         return self.model.all()
 
-    def _get_row(self, dbset):
+    def _get_row(self, dbset: DBSet) -> Optional[Row]:
         return dbset.select(limitby=(0, 1)).first()
 
     def get_pagination(self):
@@ -321,11 +330,9 @@ class RESTModule(AppModule):
             rv = await _parse_params(*params, **self._parsing_params_kwargs)
         else:
             rv = await _parse_params_wparser(self.parser)
-        self._after_parse_params(rv)
+        for callback in self._after_params_callbacks:
+            callback(rv)
         return rv
-
-    def _after_parse_params(self, attrs):
-        pass
 
     #: default routes
     async def _index(self, dbset):
@@ -340,14 +347,20 @@ class RESTModule(AppModule):
     async def _create(self):
         response.status = 201
         attrs = await self.parse_params()
+        for callback in self._before_create_callbacks:
+            callback(attrs)
         r = self.model.create(**attrs)
         if r.errors:
             response.status = 422
             return self.error_422(r.errors)
+        for callback in self._after_create_callbacks:
+            callback(r.id)
         return self.serialize_one(r.id)
 
     async def _update(self, dbset, rid):
         attrs = await self.parse_params()
+        for callback in self._before_update_callbacks:
+            callback(rid, attrs)
         r = dbset.where(self.model.id == rid).validate_and_update(**attrs)
         if r.errors:
             response.status = 422
@@ -355,13 +368,18 @@ class RESTModule(AppModule):
         elif not r.updated:
             response.status = 404
             return self.error_404()
-        return self.serialize_one(self.model.get(rid))
+        row = self.model.get(rid)
+        for callback in self._after_update_callbacks:
+            callback(row)
+        return self.serialize_one(row)
 
     async def _delete(self, dbset, rid):
-        rv = dbset.where(self.model.id == rid).delete()
-        if not rv:
+        r = dbset.where(self.model.id == rid).delete()
+        if not r:
             response.status = 404
             return self.error_404()
+        for callback in self._after_delete_callbacks:
+            callback(rid)
         return {}
 
     @property
@@ -385,16 +403,51 @@ class RESTModule(AppModule):
         self._json_query_pipe.set_accepted()
 
     #: decorators
-    def get_dbset(self, f):
+    def get_dbset(
+        self,
+        f: Callable[[RESTModule], DBSet]
+    ) -> Callable[[RESTModule], DBSet]:
         self._fetcher_method = f
         return f
 
-    def get_row(self, f):
+    def get_row(
+        self,
+        f: Callable[[DBSet], Optional[Row]]
+    ) -> Callable[[DBSet], Optional[Row]]:
         self._select_method = f
         return f
 
-    def after_parse_params(self, f):
-        self._after_parse_method = f
+    def before_create(
+        self,
+        f: Callable[[sdict], None]
+    ) -> Callable[[sdict], None]:
+        self._before_create_callbacks.append(f)
+        return f
+
+    def before_update(
+        self,
+        f: Callable[[int, sdict], None]
+    ) -> Callable[[int, sdict], None]:
+        self._before_update_callbacks.append(f)
+        return f
+
+    def after_parse_params(
+        self,
+        f: Callable[[sdict], None]
+    ) -> Callable[[sdict], None]:
+        self._after_params_callbacks.append(f)
+        return f
+
+    def after_create(self, f: Callable[[Row], None]) -> Callable[[Row], None]:
+        self._after_create_callbacks.append(f)
+        return f
+
+    def after_update(self, f: Callable[[Row], None]) -> Callable[[Row], None]:
+        self._after_update_callbacks.append(f)
+        return f
+
+    def after_delete(self, f: Callable[[int], None]) -> Callable[[int], None]:
+        self._after_delete_callbacks.append(f)
         return f
 
     def index(self, pipeline=[]):
