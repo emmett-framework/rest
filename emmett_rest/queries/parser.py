@@ -65,7 +65,8 @@ def _dict_op_parser(key: str, value: Any, ctx: sdict) -> Expression:
     inner = _conditions_parser(
         ctx.op_set, ctx.op_validators, ctx.op_parsers,
         ctx.model, value, ctx.accepted_set,
-        parent=key)
+        parent=key
+    )
     return op(None, inner)
 
 

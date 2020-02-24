@@ -143,6 +143,7 @@ def test_parse_combined(db):
     qdict = {
         'str': 'bar',
         'int': {'$gt': 2},
+        '$not': {'int': {'$in': [4, 5]}},
         '$or': [
             {'float': 3.2},
             {'datetime': {'$gte': dt1, '$lt': dt2}}
@@ -154,9 +155,12 @@ def test_parse_combined(db):
         parsed.query,
         Test.all().where(
             lambda m:
-                (m.str == 'bar') & (m.int > 2) & (
-                    (m.float == 3.2) | (
-                        (m.datetime >= dt1) & (m.datetime < dt2)
+                (m.str == 'bar') &
+                (m.int > 2) & (
+                    ~m.int.belongs([4, 5]) & (
+                        (m.float == 3.2) | (
+                            (m.datetime >= dt1) & (m.datetime < dt2)
+                        )
                     )
                 )
         ).query
