@@ -109,7 +109,6 @@ class RESTModule(AppModule):
         #: overridable methods
         self._fetcher_method = self._get_dbset
         self._select_method = self._get_row
-        self._after_parse_method = self._after_parse_params
         self.error_400 = self.build_error_400
         self.error_404 = self.build_error_404
         self.error_422 = self.build_error_422
