@@ -45,8 +45,5 @@ setup(
         'Programming Language :: Python :: 3.8',
         'Topic :: Internet :: WWW/HTTP :: Dynamic Content',
         'Topic :: Software Development :: Libraries :: Python Modules'
-    ],
-    entry_points={
-        'console_scripts': ['emmett = emmett.cli:main']
-    }
+    ]
 )

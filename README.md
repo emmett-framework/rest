@@ -2,6 +2,9 @@
 
 Emmett-REST is a REST extension for [Emmett framework](https://github.com/emmett-framework/emmett).
 
+[![pip version](https://img.shields.io/pypi/v/emmett-rest.svg?style=flat)](https://pypi.python.org/pypi/Emmett-REST)
+![Tests Status](https://github.com/emmett-framework/rest/workflows/Tests/badge.svg)
+
 ## In a nutshell
 
 ```python
@@ -321,7 +324,7 @@ def task_422err(errors):
 
 ### Customizing meta generation
 
-You can define custom method for the `meta` generation using the appropriate `` decorator:
+You can define custom method for the `meta` generation using the appropriate `meta_builder` decorator:
 
 ```python
 @tasks.meta_builder
@@ -686,7 +689,6 @@ def init(self):
         self._json_query_pipe
     ]
     self.sample_pipeline = [SetFetcher(self), self._json_query_pipe]
-        
 ```
 
 We've also overridden the methods for the database set retrieval and the *index* route. As you can see, these methods are starting with the `_` since are the default ones and you can still override them with decorators. This is the complete list of methods you may want to override instead of using decorators:

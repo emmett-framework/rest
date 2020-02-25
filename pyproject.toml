@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "Emmett-REST"
-version = "0.1.0.dev0"
+version = "1.0.0a1"
 description = "REST extension for Emmett framework"
 authors = ["Giovanni Barillari <gi0baro@d4net.org>"]
 license = "BSD-3-Clause"
@@ -24,7 +24,8 @@ classifiers = [
 ]
 
 packages = [
-    {include = "emmett_rest"}
+    {include = "emmett_rest"},
+    {include = "tests", format = "sdist"}
 ]
 include = [
     "LICENSE"
