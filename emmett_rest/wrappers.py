@@ -32,6 +32,7 @@ def wrap_module_from_app(ext: Extension) -> Callable[..., RESTModule]:
         list_envelope: Optional[str] = None,
         single_envelope: Optional[Union[str, bool]] = None,
         meta_envelope: Optional[str] = None,
+        groups_envelope: Optional[str] = None,
         use_envelope_on_parse: Optional[bool] = None,
         serialize_meta: Optional[bool] = None,
         url_prefix: Optional[str] = None,
@@ -42,7 +43,8 @@ def wrap_module_from_app(ext: Extension) -> Callable[..., RESTModule]:
         return module_class.from_app(
             ext, import_name, name, model, serializer, parser,
             enabled_methods, disabled_methods,
-            list_envelope, single_envelope, meta_envelope,
+            list_envelope, single_envelope,
+            meta_envelope, groups_envelope,
             use_envelope_on_parse, serialize_meta,
             url_prefix, hostname
         )
@@ -62,6 +64,7 @@ def wrap_module_from_module(ext: Extension) -> Callable[..., RESTModule]:
         list_envelope: Optional[str] = None,
         single_envelope: Optional[Union[str, bool]] = None,
         meta_envelope: Optional[str] = None,
+        groups_envelope: Optional[str] = None,
         use_envelope_on_parse: Optional[bool] = None,
         serialize_meta: Optional[bool] = None,
         url_prefix: Optional[str] = None,
@@ -72,7 +75,8 @@ def wrap_module_from_module(ext: Extension) -> Callable[..., RESTModule]:
         return module_class.from_module(
             ext, mod, import_name, name, model, serializer, parser,
             enabled_methods, disabled_methods,
-            list_envelope, single_envelope, meta_envelope,
+            list_envelope, single_envelope,
+            meta_envelope, groups_envelope,
             use_envelope_on_parse, serialize_meta,
             url_prefix, hostname
         )

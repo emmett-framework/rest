@@ -9,7 +9,7 @@
     :license: BSD-3-Clause
 """
 
-from emmett import response
+from emmett import request, response
 from emmett.pipeline import Pipe
 
 
@@ -37,3 +37,63 @@ class RecordFetcher(ModulePipe):
             kwargs['dbset'].where(self.mod.model.id == kwargs['rid']))
         del kwargs['rid']
         del kwargs['dbset']
+
+
+class FieldPipe(ModulePipe):
+    def __init__(self, mod, accepted_attr_name, arg='field'):
+        super().__init__(mod)
+        self.accepted_attr_name = accepted_attr_name
+        self.arg_name = arg
+        self.set_accepted()
+
+    def set_accepted(self):
+        self._accepted_dict = {
+            val: self.mod.model.table[val]
+            for val in getattr(self.mod, self.accepted_attr_name)
+        }
+
+    async def pipe(self, next_pipe, **kwargs):
+        field = self._accepted_dict.get(kwargs[self.arg_name])
+        if not field:
+            response.status = 404
+            return self.mod.build_error_404()
+        kwargs[self.arg_name] = field
+        return await next_pipe(**kwargs)
+
+
+class FieldsPipe(ModulePipe):
+    def __init__(
+        self,
+        mod,
+        accepted_attr_name,
+        query_param_name='fields',
+        arg='fields'
+    ):
+        super().__init__(mod)
+        self.accepted_attr_name = accepted_attr_name
+        self.param_name = query_param_name
+        self.arg_name = arg
+        self.set_accepted()
+
+    def set_accepted(self):
+        self._accepted_set = set(getattr(self.mod, self.accepted_attr_name))
+
+    def parse_fields(self):
+        pfields = (
+            (
+                isinstance(request.query_params[self.param_name], str) and
+                request.query_params[self.param_name]
+            ) or ''
+        ).split(',')
+        sfields = self._accepted_set & set(pfields)
+        return [self.mod.model.table[key] for key in sfields]
+
+    async def pipe(self, next_pipe, **kwargs):
+        fields = self.parse_fields()
+        if not fields:
+            response.status = 400
+            return self.mod.build_error_400({
+                self.param_name: 'invalid value'
+            })
+        kwargs[self.arg_name] = fields
+        return await next_pipe(**kwargs)

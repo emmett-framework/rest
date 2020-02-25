@@ -21,7 +21,7 @@ from emmett.extensions import Extension
 from emmett.orm.objects import Row, Set as DBSet
 from emmett.tools.service import JSONServicePipe
 
-from .helpers import RecordFetcher, SetFetcher
+from .helpers import RecordFetcher, SetFetcher, FieldPipe, FieldsPipe
 from .parsers import (
     parse_params as _parse_params,
     parse_params_with_parser as _parse_params_wparser
@@ -32,7 +32,10 @@ from .typing import ModelType, ParserType, SerializerType
 
 
 class RESTModule(AppModule):
-    _all_methods = {'index', 'create', 'read', 'update', 'delete'}
+    _all_methods = {
+        'index', 'create', 'read', 'update', 'delete',
+        'group', 'stats', 'sample'
+    }
 
     @classmethod
     def from_app(
@@ -48,6 +51,7 @@ class RESTModule(AppModule):
         list_envelope: Optional[str] = None,
         single_envelope: Optional[Union[str, bool]] = None,
         meta_envelope: Optional[str] = None,
+        groups_envelope: Optional[str] = None,
         use_envelope_on_parse: Optional[bool] = None,
         serialize_meta: Optional[bool] = None,
         url_prefix: Optional[str] = None,
@@ -56,7 +60,8 @@ class RESTModule(AppModule):
         return cls(
             ext, name, import_name, model, serializer, parser,
             enabled_methods, disabled_methods,
-            list_envelope, single_envelope, meta_envelope,
+            list_envelope, single_envelope,
+            meta_envelope, groups_envelope,
             use_envelope_on_parse, serialize_meta,
             url_prefix, hostname
         )
@@ -76,6 +81,7 @@ class RESTModule(AppModule):
         list_envelope: Optional[str] = None,
         single_envelope: Optional[Union[str, bool]] = None,
         meta_envelope: Optional[str] = None,
+        groups_envelope: Optional[str] = None,
         use_envelope_on_parse: Optional[bool] = None,
         serialize_meta: Optional[bool] = None,
         url_prefix: Optional[str] = None,
@@ -94,7 +100,8 @@ class RESTModule(AppModule):
         return cls(
             ext, name, import_name, model, serializer, parser,
             enabled_methods, disabled_methods,
-            list_envelope, single_envelope, meta_envelope,
+            list_envelope, single_envelope,
+            meta_envelope, groups_envelope,
             use_envelope_on_parse, serialize_meta,
             module_url_prefix, hostname, mod.pipeline
         )
@@ -102,7 +109,8 @@ class RESTModule(AppModule):
     def __init__(
         self, ext, name, import_name, model, serializer=None, parser=None,
         enabled_methods=None, disabled_methods=None,
-        list_envelope=None, single_envelope=None, meta_envelope=None,
+        list_envelope=None, single_envelope=None,
+        meta_envelope=None, groups_envelope=None,
         use_envelope_on_parse=None, serialize_meta=None,
         url_prefix=None, hostname=None, pipeline=[]
     ):
@@ -177,6 +185,10 @@ class RESTModule(AppModule):
             meta_envelope if meta_envelope is not None else
             self.ext.config.meta_envelope
         )
+        self.groups_envelope = (
+            groups_envelope if groups_envelope is not None else
+            self.ext.config.groups_envelope
+        )
         self.use_envelope_on_parse = (
             use_envelope_on_parse if use_envelope_on_parse is not None else
             self.ext.config.use_envelope_on_parse
@@ -188,13 +200,29 @@ class RESTModule(AppModule):
         self._queryable_fields = []
         self._sortable_fields = []
         self._sortable_dict = {}
+        self._groupable_fields = []
+        self._statsable_fields = []
         self._json_query_pipe = JSONQueryPipe(self)
+        self._group_field_pipe = FieldPipe(self, '_groupable_fields')
+        self._stats_field_pipe = FieldsPipe(self, '_statsable_fields')
         self.allowed_sorts = [self.default_sort]
+        #: pipelines
         self.index_pipeline = [SetFetcher(self), self._json_query_pipe]
         self.create_pipeline = []
         self.read_pipeline = [SetFetcher(self), RecordFetcher(self)]
         self.update_pipeline = [SetFetcher(self)]
         self.delete_pipeline = [SetFetcher(self)]
+        self.group_pipeline = [
+            self._group_field_pipe,
+            SetFetcher(self),
+            self._json_query_pipe
+        ]
+        self.stats_pipeline = [
+            self._stats_field_pipe,
+            SetFetcher(self),
+            self._json_query_pipe
+        ]
+        self.sample_pipeline = [SetFetcher(self), self._json_query_pipe]
         #: custom init
         self.init()
         #: configure module
@@ -218,6 +246,10 @@ class RESTModule(AppModule):
                     {'evenlope': self.single_envelope}
         else:
             self.serialize_one = self.serialize
+        self.pack_data = (
+            self.pack_with_list_envelope_and_meta if self.serialize_meta
+            else self.pack_with_list_envelope
+        )
         #: adjust enabled methods
         for method_name in self.disabled_methods:
             self.enabled_methods.remove(method_name)
@@ -225,13 +257,19 @@ class RESTModule(AppModule):
         self._expose_routes()
 
     def _expose_routes(self):
+        path_base_trail = (
+            self._path_base.endswith('/') and self._path_base or
+            f'{self._path_base}/'
+        )
         self._methods_map = {
             'index': (self._path_base, 'get'),
             'read': (self._path_rid, 'get'),
             'create': (self._path_base, 'post'),
             'update': (self._path_rid, ['put', 'patch']),
-            'delete': (self._path_rid, 'delete')
-            # TODO: additional methods
+            'delete': (self._path_rid, 'delete'),
+            'group': (f'{path_base_trail}group/<str:field>', 'get'),
+            'stats': (f'{path_base_trail}stats', 'get'),
+            'sample': (f'{path_base_trail}sample', 'get')
         }
         for key in self.enabled_methods:
             path, methods = self._methods_map[key]
@@ -261,20 +299,21 @@ class RESTModule(AppModule):
             page_size = self._pagination.default_pagesize
         return page, page_size
 
-    def get_sort(self):
+    def get_sort(self, default=None, allowed_fields=None):
         pfields = (
             (
                 isinstance(request.query_params.sort_by, str) and
                 request.query_params.sort_by
-            ) or self.default_sort
+            ) or default or self.default_sort
         ).split(',')
         rv = []
+        allowed_fields = allowed_fields or self._sortable_dict
         for pfield in pfields:
             asc = True
             if pfield.startswith('-'):
                 pfield = pfield[1:]
                 asc = False
-            field = self._sortable_dict.get(pfield)
+            field = allowed_fields.get(pfield)
             if not field:
                 continue
             rv.append(field if asc else ~field)
@@ -310,7 +349,7 @@ class RESTModule(AppModule):
     def serialize(self, data, **extras):
         return _serialize(data, self.serializer, **extras)
 
-    def serialize_with_list_envelope(self, data, **extras):
+    def serialize_with_list_envelope(self, data, dbset, pagination, **extras):
         return {self.list_envelope: self.serialize(data, **extras)}
 
     def serialize_with_list_envelope_and_meta(
@@ -323,6 +362,20 @@ class RESTModule(AppModule):
 
     def serialize_with_single_envelope(self, data, **extras):
         return {self.single_envelope: self.serialize(data, **extras)}
+
+    def pack_with_list_envelope(self, envelope, data, **extras):
+        return {envelope: data, **extras}
+
+    def pack_with_list_envelope_and_meta(self, envelope, data, **extras):
+        count = len(data)
+        return {
+            envelope: data,
+            self.meta_envelope: self.build_meta(
+                sdict(count=lambda c=count: c),
+                (1, count)
+            ),
+            **extras
+        }
 
     async def parse_params(self, *params):
         if params:
@@ -381,6 +434,45 @@ class RESTModule(AppModule):
             callback(rid)
         return {}
 
+    #: additional routes
+    async def _group(self, dbset, field):
+        count_field = self.model.id.count()
+        sort = self.get_sort(
+            default='count',
+            allowed_fields={'count': count_field}
+        )
+        data = [
+            {
+                'value': row[self.model.table][field.name],
+                'count': row[count_field]
+            } for row in dbset.select(
+                field, count_field, groupby=field, orderby=sort
+            )
+        ]
+        return self.pack_data(self.groups_envelope, data)
+
+    async def _stats(self, dbset, fields):
+        grouped_fields, select_fields, rv = {}, [], {}
+        for field in fields:
+            grouped_fields[field.name] = {
+                'min': field.min(),
+                'max': field.max(),
+                'avg': field.avg()
+            }
+            select_fields.extend(grouped_fields[field.name].values())
+        row = dbset.select(*select_fields).first()
+        for key, attrs in grouped_fields.items():
+            rv[key] = {
+                attr_key: row[field] for attr_key, field in attrs.items()
+            }
+        return rv
+
+    async def _sample(self, dbset):
+        pagination = self.get_pagination()
+        rows = dbset.select(paginate=pagination, orderby='<random>')
+        return self.pack_data(self.list_envelope, rows)
+
+    #: properties
     @property
     def allowed_sorts(self) -> List[str]:
         return self._sortable_fields
@@ -400,6 +492,24 @@ class RESTModule(AppModule):
     def query_allowed_fields(self, val: List[str]):
         self._queryable_fields = val
         self._json_query_pipe.set_accepted()
+
+    @property
+    def grouping_allowed_fields(self) -> List[str]:
+        return self._groupable_fields
+
+    @grouping_allowed_fields.setter
+    def grouping_allowed_fields(self, val: List[str]):
+        self._groupable_fields = val
+        self._group_field_pipe.set_accepted()
+
+    @property
+    def stats_allowed_fields(self) -> List[str]:
+        return self._statsable_fields
+
+    @stats_allowed_fields.setter
+    def stats_allowed_fields(self, val: List[str]):
+        self._statsable_fields = val
+        self._stats_field_pipe.set_accepted()
 
     #: decorators
     def get_dbset(

@@ -9,7 +9,7 @@ from emmett_rest.queries import JSONQueryPipe
 from emmett_rest.queries.parser import parse_conditions
 
 
-class Test(Model):
+class Sample(Model):
     str = Field()
     int = Field.int()
     float = Field.float()
@@ -18,7 +18,7 @@ class Test(Model):
 
 @pytest.fixture(scope='function')
 def db(raw_db):
-    raw_db.define_models(Test)
+    raw_db.define_models(Sample)
     return raw_db
 
 
@@ -54,19 +54,19 @@ def test_parse_fields(db):
     qdict = {
         'str': 'bar'
     }
-    parsed = parse_conditions(Test, Test.all(), qdict, {'str'})
+    parsed = parse_conditions(Sample, Sample.all(), qdict, {'str'})
     assert queries_equal(
         parsed.query,
-        Test.all().where(lambda m: m.str == 'bar').query
+        Sample.all().where(lambda m: m.str == 'bar').query
     )
 
     qdict = {
         'str': {'$regex': 'bar'}
     }
-    parsed = parse_conditions(Test, Test.all(), qdict, {'str'})
+    parsed = parse_conditions(Sample, Sample.all(), qdict, {'str'})
     assert queries_equal(
         parsed.query,
-        Test.all().where(
+        Sample.all().where(
             lambda m: m.str.contains('bar', case_sensitive=True)
         ).query
     )
@@ -74,65 +74,65 @@ def test_parse_fields(db):
     qdict = {
         'str': {'$iregex': 'bar'}
     }
-    parsed = parse_conditions(Test, Test.all(), qdict, {'str'})
+    parsed = parse_conditions(Sample, Sample.all(), qdict, {'str'})
     assert queries_equal(
         parsed.query,
-        Test.all().where(lambda m: m.str.contains('bar')).query
+        Sample.all().where(lambda m: m.str.contains('bar')).query
     )
 
     qdict = {
         'int': 2
     }
-    parsed = parse_conditions(Test, Test.all(), qdict, {'int'})
+    parsed = parse_conditions(Sample, Sample.all(), qdict, {'int'})
     assert queries_equal(
         parsed.query,
-        Test.all().where(lambda m: m.int == 2).query
+        Sample.all().where(lambda m: m.int == 2).query
     )
 
     qdict = {
         'int': {'$gte': 0, '$lt': 2}
     }
-    parsed = parse_conditions(Test, Test.all(), qdict, {'int'})
+    parsed = parse_conditions(Sample, Sample.all(), qdict, {'int'})
     assert queries_equal(
         parsed.query,
-        Test.all().where(lambda m: (m.int >= 0) & (m.int < 2)).query
+        Sample.all().where(lambda m: (m.int >= 0) & (m.int < 2)).query
     )
 
     qdict = {
         'float': 2.3
     }
-    parsed = parse_conditions(Test, Test.all(), qdict, {'float'})
+    parsed = parse_conditions(Sample, Sample.all(), qdict, {'float'})
     assert queries_equal(
         parsed.query,
-        Test.all().where(lambda m: m.float == 2.3).query
+        Sample.all().where(lambda m: m.float == 2.3).query
     )
 
     qdict = {
         'float': {'$gte': 2, '$lt': 5.5}
     }
-    parsed = parse_conditions(Test, Test.all(), qdict, {'float'})
+    parsed = parse_conditions(Sample, Sample.all(), qdict, {'float'})
     assert queries_equal(
         parsed.query,
-        Test.all().where(lambda m: (m.float >= 2) & (m.float < 5.5)).query
+        Sample.all().where(lambda m: (m.float >= 2) & (m.float < 5.5)).query
     )
 
     dt1, dt2 = now(), now().add(days=1)
     qdict = {
         'datetime': dt1
     }
-    parsed = parse_conditions(Test, Test.all(), qdict, {'datetime'})
+    parsed = parse_conditions(Sample, Sample.all(), qdict, {'datetime'})
     assert queries_equal(
         parsed.query,
-        Test.all().where(lambda m: m.datetime == dt1).query
+        Sample.all().where(lambda m: m.datetime == dt1).query
     )
 
     qdict = {
         'datetime': {'$gte': dt1, '$lt': dt2}
     }
-    parsed = parse_conditions(Test, Test.all(), qdict, {'datetime'})
+    parsed = parse_conditions(Sample, Sample.all(), qdict, {'datetime'})
     assert queries_equal(
         parsed.query,
-        Test.all().where(
+        Sample.all().where(
             lambda m: (m.datetime >= dt1) & (m.datetime < dt2)
         ).query
     )
@@ -150,10 +150,10 @@ def test_parse_combined(db):
         ]
     }
     parsed = parse_conditions(
-        Test, Test.all(), qdict, {'str', 'int', 'float', 'datetime'})
+        Sample, Sample.all(), qdict, {'str', 'int', 'float', 'datetime'})
     assert queries_equal(
         parsed.query,
-        Test.all().where(
+        Sample.all().where(
             lambda m:
                 (m.str == 'bar') &
                 (m.int > 2) & (
@@ -173,10 +173,10 @@ def test_parse_combined(db):
         ]
     }
     parsed = parse_conditions(
-        Test, Test.all(), qdict, {'str', 'int', 'float', 'datetime'})
+        Sample, Sample.all(), qdict, {'str', 'int', 'float', 'datetime'})
     assert queries_equal(
         parsed.query,
-        Test.all().where(
+        Sample.all().where(
             lambda m:
                 (m.float == 3.2) | (
                     (m.datetime >= dt1) & (m.datetime < dt2)
@@ -193,7 +193,7 @@ async def _fake_pipe(**kwargs):
 async def test_pipes(db, json_dump):
     fake_mod = sdict(
         _queryable_fields=['str', 'int'],
-        model=Test,
+        model=Sample,
         ext=sdict(
             config=sdict(
                 query_param='where'
@@ -214,5 +214,5 @@ async def test_pipes(db, json_dump):
     res = await pipe.pipe(_fake_pipe)
     assert queries_equal(
         res['dbset'].query,
-        Test.all().where(lambda m: (m.str == 'bar') | (m.int > 0)).query
+        Sample.all().where(lambda m: (m.str == 'bar') | (m.int > 0)).query
     )

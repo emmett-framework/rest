@@ -39,6 +39,7 @@ class REST(Extension):
         id_path='/<int:rid>',
         list_envelope='data',
         single_envelope=False,
+        groups_envelope='data',
         use_envelope_on_parse=False,
         serialize_meta=True,
         meta_envelope='meta',
