@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "Emmett-REST"
-version = "1.0.0a2"
+version = "1.0.0b1"
 description = "REST extension for Emmett framework"
 authors = ["Giovanni Barillari <gi0baro@d4net.org>"]
 license = "BSD-3-Clause"
@@ -10,7 +10,7 @@ repository = "https://github.com/emmett-framework/rest"
 
 keywords = ["rest", "web", "emmett"]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 4 - Beta",
     "Environment :: Web Environment",
     "Framework :: AsyncIO",
     "Intended Audience :: Developers",
@@ -33,13 +33,16 @@ include = [
 
 [tool.poetry.dependencies]
 python = "^3.7"
-emmett = "2.0.0b1"
+emmett = {version = ">1", allow-prereleases = true}
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.3"
 pytest-asyncio = "^0.10"
 psycopg2-binary = "~2.8.4"
 pylint = "^2.4.4"
+
+[tool.poetry.urls]
+"Issue Tracker" = "https://github.com/emmett-framework/rest/issues"
 
 [build-system]
 requires = ["poetry>=1.0.0"]

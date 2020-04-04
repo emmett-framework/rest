@@ -1,1 +1,1 @@
-emmett==2.0.0b1
+emmett==2.0.0b2
