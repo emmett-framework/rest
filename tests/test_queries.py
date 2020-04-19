@@ -211,7 +211,7 @@ async def test_pipes(db, json_dump):
     current.request = sdict(
         query_params=sdict(
             where=json_dump(qdict)))
-    res = await pipe.pipe(_fake_pipe)
+    res = await pipe.pipe_request(_fake_pipe, dbset=Sample.all())
     assert queries_equal(
         res['dbset'].query,
         Sample.all().where(lambda m: (m.str == 'bar') | (m.int > 0)).query
