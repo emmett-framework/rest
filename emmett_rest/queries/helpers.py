@@ -31,7 +31,7 @@ class JSONQueryPipe(ModulePipe):
     def set_accepted(self):
         self._accepted_set = set(self.mod._queryable_fields)
 
-    async def pipe(self, next_pipe, **kwargs):
+    async def pipe_request(self, next_pipe, **kwargs):
         if request.query_params[self.query_param] and self._accepted_set:
             try:
                 input_condition = self._parse_where_param(
@@ -39,15 +39,15 @@ class JSONQueryPipe(ModulePipe):
                 )
             except ValueError:
                 response.status = 400
-                return self.mod.error_400({'where': 'invalid value'})
+                return self.mod.error_400({self.query_param: 'invalid value'})
             try:
                 dbset = _parse_conditions(
-                    self.mod.model, self.mod.model.all(),
+                    self.mod.model, kwargs['dbset'],
                     input_condition, self._accepted_set
                 )
             except QueryError as exc:
                 response.status = 400
-                return self.mod.error_400({'where': exc.gen_msg()})
+                return self.mod.error_400({self.query_param: exc.gen_msg()})
             kwargs['dbset'] = dbset
         return await next_pipe(**kwargs)
 

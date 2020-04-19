@@ -52,7 +52,7 @@ class FieldPipe(ModulePipe):
             for val in getattr(self.mod, self.accepted_attr_name)
         }
 
-    async def pipe(self, next_pipe, **kwargs):
+    async def pipe_request(self, next_pipe, **kwargs):
         field = self._accepted_dict.get(kwargs[self.arg_name])
         if not field:
             response.status = 404
@@ -88,7 +88,7 @@ class FieldsPipe(ModulePipe):
         sfields = self._accepted_set & set(pfields)
         return [self.mod.model.table[key] for key in sfields]
 
-    async def pipe(self, next_pipe, **kwargs):
+    async def pipe_request(self, next_pipe, **kwargs):
         fields = self.parse_fields()
         if not fields:
             response.status = 400
