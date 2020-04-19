@@ -206,7 +206,13 @@ class RESTModule(AppModule):
         self._group_field_pipe = FieldPipe(self, '_groupable_fields')
         self._stats_field_pipe = FieldsPipe(self, '_statsable_fields')
         self.allowed_sorts = [self.default_sort]
-        #: pipelines
+        self._init_pipelines()
+        #: custom init
+        self.init()
+        #: configure module
+        self._after_initialize()
+
+    def _init_pipelines(self):
         self.index_pipeline = [SetFetcher(self), self._json_query_pipe]
         self.create_pipeline = []
         self.read_pipeline = [SetFetcher(self), RecordFetcher(self)]
@@ -223,10 +229,6 @@ class RESTModule(AppModule):
             self._json_query_pipe
         ]
         self.sample_pipeline = [SetFetcher(self), self._json_query_pipe]
-        #: custom init
-        self.init()
-        #: configure module
-        self._after_initialize()
 
     def init(self):
         pass
