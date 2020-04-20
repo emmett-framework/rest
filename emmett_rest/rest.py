@@ -339,8 +339,8 @@ class RESTModule(AppModule):
             return {'errors': errors}
         return {'errors': {'request': 'unprocessable entity'}}
 
-    def _build_meta(self, dbset, pagination):
-        count = dbset.count()
+    def _build_meta(self, dbset, pagination, **kwargs):
+        count = kwargs.get('count', dbset.count())
         page, page_size = pagination
         return {
             'object': 'list',
@@ -357,9 +357,10 @@ class RESTModule(AppModule):
     def serialize_with_list_envelope_and_meta(
         self, data, dbset, pagination, **extras
     ):
+        mextras = extras.pop('meta_extras', {})
         return {
             self.list_envelope: self.serialize(data, **extras),
-            self.meta_envelope: self.build_meta(dbset, pagination)
+            self.meta_envelope: self.build_meta(dbset, pagination, **mextras)
         }
 
     def serialize_with_single_envelope(self, data, **extras):
@@ -470,9 +471,12 @@ class RESTModule(AppModule):
         return rv
 
     async def _sample(self, dbset):
-        pagination = self.get_pagination()
-        rows = dbset.select(paginate=pagination, orderby='<random>')
-        return self.pack_data(self.list_envelope, rows)
+        _, page_size = self.get_pagination()
+        rows = dbset.select(paginate=(1, page_size), orderby='<random>')
+        return self.serialize_many(
+            rows, dbset, (1, page_size),
+            meta_extras={'count': len(rows)}
+        )
 
     #: properties
     @property

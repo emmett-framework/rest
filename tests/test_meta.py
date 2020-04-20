@@ -51,7 +51,7 @@ def client_metacustom(rest_app):
     )
 
     @mod.meta_builder
-    def _meta(dbset, pagination):
+    def _meta(dbset, pagination, **kwargs):
         count = dbset.count()
         page, page_size = pagination
         total_pages = math.ceil(count / page_size)
