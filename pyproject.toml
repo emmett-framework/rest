@@ -1,11 +1,12 @@
 [tool.poetry]
 name = "Emmett-REST"
-version = "1.0.0.dev0"
+version = "1.0.0"
 description = "REST extension for Emmett framework"
 authors = ["Giovanni Barillari <gi0baro@d4net.org>"]
 license = "BSD-3-Clause"
 
 readme = "README.md"
+homepage = "https://github.com/emmett-framework/rest"
 repository = "https://github.com/emmett-framework/rest"
 
 keywords = ["rest", "web", "emmett"]
@@ -28,12 +29,13 @@ packages = [
     {include = "tests", format = "sdist"}
 ]
 include = [
+    "CHANGES.md",
     "LICENSE"
 ]
 
 [tool.poetry.dependencies]
 python = "^3.7"
-emmett = {version = ">1", allow-prereleases = true}
+emmett = "^2.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.3"
