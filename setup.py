@@ -34,7 +34,7 @@ setup(
     python_requires=">=3.7",
     install_requires=requirements,
     classifiers=[
-        "Development Status :: 4 - Beta",
+        "Development Status :: 5 - Production/Stable",
         "Environment :: Web Environment",
         "Framework :: AsyncIO",
         "Intended Audience :: Developers",

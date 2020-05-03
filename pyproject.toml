@@ -11,7 +11,7 @@ repository = "https://github.com/emmett-framework/rest"
 
 keywords = ["rest", "web", "emmett"]
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 5 - Production/Stable",
     "Environment :: Web Environment",
     "Framework :: AsyncIO",
     "Intended Audience :: Developers",
