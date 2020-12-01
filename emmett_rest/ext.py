@@ -56,7 +56,7 @@ class REST(Extension):
         self._serialize = serialize
         self._parse_params = parse_params
 
-    @listen_signal(Signals.before_routes)
+    @listen_signal(Signals.before_database)
     def _configure_models_attr(self):
         MetaModel._inheritable_dict_attrs_.append(
             ('rest_rw', {'id': (True, False)})
