@@ -2,7 +2,6 @@
 
 import pytest
 
-from emmett import sdict
 from emmett.orm import Field, Model
 
 

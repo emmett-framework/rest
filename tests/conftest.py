@@ -24,7 +24,7 @@ def json_load():
 
 @pytest.yield_fixture(scope='session')
 def event_loop():
-    loop = loops.get_loop('auto')
+    loop = loops.get('auto')
     yield loop
     loop.close()
 
