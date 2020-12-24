@@ -9,7 +9,7 @@
     :license: BSD-3-Clause
 """
 
-from emmett.extensions import Extension, listen_signal
+from emmett.extensions import Extension, Signals, listen_signal
 from emmett.orm.models import MetaModel
 
 from .rest import AppModule, RESTModule
@@ -56,7 +56,7 @@ class REST(Extension):
         self._serialize = serialize
         self._parse_params = parse_params
 
-    @listen_signal('before_database')
+    @listen_signal(Signals.before_database)
     def _configure_models_attr(self):
         MetaModel._inheritable_dict_attrs_.append(
             ('rest_rw', {'id': (True, False)})
