@@ -286,7 +286,7 @@ async def task_edit(dbset, rid):
 
 ```python
 @tasks.delete()
-def task_del(dbset, rid):
+async def task_del(dbset, rid):
     r = dbset.where(Task.id == rid).delete()
     if not r:
         response.status = 404
@@ -520,7 +520,34 @@ class TaskParser(Parser):
         # some code
 ```
 
-There's also an additional attribute that you can set over a `Parser` which is the `envelope` one, if you expect to have enveloped bodies over `POST`, `PUT` and `PATCH` requests.
+and you also have the `envelope` attribute at your disposal in case you expect to have enveloped bodies over `POST`, `PUT` and `PATCH` requests:
+
+```python
+class TaskParser(Parser):
+    envelope = "task"
+```
+
+The `Parser` class also offers some decorators you might need in your code: `parse_value` and `processor`.
+
+While the first one might be handy in conditions where you need to edit a single attribute:
+
+```python
+class TaskParser(Parser):
+    _completed_map = {"yes": True, "no": False}
+
+    @Parser.parse_value("is_completed")
+    def parse_completed(self, value):
+        return self._completed_map[value]
+```
+
+the latter gives you access to all the parameters and the parsed dictionary, so you can deeply customise the parsing flow:
+
+```python
+class TaskParser(Parser):
+    @Parser.processor()
+    def custom_parsing(self, params, obj):
+        obj.status = "completed" if params.is_completed else "running"
+```
 
 ### Pagination
 
@@ -638,7 +665,7 @@ class MyRESTModule(RESTModule):
     def _get_dbset(self):
         return self.model.where(lambda m: m.user == session.user.id)
         
-    def _index(self, dbset):
+    async def _index(self, dbset):
         rows = dbset.select(paginate=self.get_pagination())
         rv = self.serialize_many(rows)
         rv['meta'] = {'total': dbset.count()}
