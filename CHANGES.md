@@ -1,6 +1,14 @@
 Emmett-REST changelog
 =====================
 
+Version 1.2
+-----------
+
+*Released on March 20th 2021*
+
+- Update Emmett to 2.2
+- Introduce Python 3.9 official support
+
 Version 1.1
 -----------
 
