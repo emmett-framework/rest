@@ -14,11 +14,12 @@ from __future__ import annotations
 import operator
 
 from functools import reduce
-from typing import Callable, List, Optional, Union
+from typing import Any, Callable, Dict, List, Optional, Union
 
 from emmett import AppModule, request, response, sdict
 from emmett.extensions import Extension
 from emmett.orm.objects import Row, Set as DBSet
+from emmett.pipeline import Pipe
 from emmett.tools.service import JSONServicePipe
 
 from .helpers import RecordFetcher, SetFetcher, FieldPipe, FieldsPipe
@@ -33,8 +34,14 @@ from .typing import ModelType, ParserType, SerializerType
 
 class RESTModule(AppModule):
     _all_methods = {
-        'index', 'create', 'read', 'update', 'delete',
-        'group', 'stats', 'sample'
+        'index',
+        'create',
+        'read',
+        'update',
+        'delete',
+        'group',
+        'stats',
+        'sample'
     }
 
     @classmethod
@@ -55,15 +62,27 @@ class RESTModule(AppModule):
         use_envelope_on_parse: Optional[bool] = None,
         serialize_meta: Optional[bool] = None,
         url_prefix: Optional[str] = None,
-        hostname: Optional[str] = None
+        hostname: Optional[str] = None,
+        opts: Dict[str, Any] = {}
     ) -> RESTModule:
         return cls(
-            ext, name, import_name, model, serializer, parser,
-            enabled_methods, disabled_methods,
-            list_envelope, single_envelope,
-            meta_envelope, groups_envelope,
-            use_envelope_on_parse, serialize_meta,
-            url_prefix, hostname
+            ext,
+            name,
+            import_name,
+            model,
+            serializer=serializer,
+            parser=parser,
+            enabled_methods=enabled_methods,
+            disabled_methods=disabled_methods,
+            list_envelope=list_envelope,
+            single_envelope=single_envelope,
+            meta_envelope=meta_envelope,
+            groups_envelope=groups_envelope,
+            use_envelope_on_parse=use_envelope_on_parse,
+            serialize_meta=serialize_meta,
+            url_prefix=url_prefix,
+            hostname=hostname,
+            **opts
         )
 
     @classmethod
@@ -85,7 +104,8 @@ class RESTModule(AppModule):
         use_envelope_on_parse: Optional[bool] = None,
         serialize_meta: Optional[bool] = None,
         url_prefix: Optional[str] = None,
-        hostname: Optional[str] = None
+        hostname: Optional[str] = None,
+        opts: Dict[str, Any] = {}
     ) -> RESTModule:
         if '.' in name:
             raise RuntimeError(
@@ -98,21 +118,46 @@ class RESTModule(AppModule):
             if mod.url_prefix else url_prefix
         hostname = hostname or mod.hostname
         return cls(
-            ext, name, import_name, model, serializer, parser,
-            enabled_methods, disabled_methods,
-            list_envelope, single_envelope,
-            meta_envelope, groups_envelope,
-            use_envelope_on_parse, serialize_meta,
-            module_url_prefix, hostname, mod.pipeline
+            ext,
+            name,
+            import_name,
+            model,
+            serializer=serializer,
+            parser=parser,
+            enabled_methods=enabled_methods,
+            disabled_methods=disabled_methods,
+            list_envelope=list_envelope,
+            single_envelope=single_envelope,
+            meta_envelope=meta_envelope,
+            groups_envelope=groups_envelope,
+            use_envelope_on_parse=use_envelope_on_parse,
+            serialize_meta=serialize_meta,
+            url_prefix=module_url_prefix,
+            hostname=hostname,
+            pipeline=mod.pipeline,
+            **opts
         )
 
     def __init__(
-        self, ext, name, import_name, model, serializer=None, parser=None,
-        enabled_methods=None, disabled_methods=None,
-        list_envelope=None, single_envelope=None,
-        meta_envelope=None, groups_envelope=None,
-        use_envelope_on_parse=None, serialize_meta=None,
-        url_prefix=None, hostname=None, pipeline=[]
+        self,
+        ext: Extension,
+        name: str,
+        import_name: str,
+        model: ModelType,
+        serializer: Optional[SerializerType] = None,
+        parser: Optional[ParserType] = None,
+        enabled_methods: Optional[List] = None,
+        disabled_methods: Optional[List] = None,
+        list_envelope: Optional[str] = None,
+        single_envelope: Optional[Union[str, bool]] = None,
+        meta_envelope: Optional[str] = None,
+        groups_envelope: Optional[str] = None,
+        use_envelope_on_parse: Optional[bool] = None,
+        serialize_meta: Optional[bool] = None,
+        url_prefix: Optional[str] = None,
+        hostname: Optional[str] = None,
+        pipeline: List[Pipe] = [],
+        **kwargs: Any
     ):
         #: overridable methods
         self._fetcher_method = self._get_dbset
@@ -141,10 +186,13 @@ class RESTModule(AppModule):
             super_pipeline.insert(0, JSONServicePipe())
         #: initialize
         super().__init__(
-            ext.app, name, import_name,
+            ext.app,
+            name,
+            import_name,
             url_prefix=url_prefix,
             hostname=hostname,
-            pipeline=super_pipeline
+            pipeline=super_pipeline,
+            **kwargs
         )
         self.ext = ext
         self._pagination = sdict()

@@ -35,7 +35,7 @@ include = [
 
 [tool.poetry.dependencies]
 python = "^3.7"
-emmett = "~2.1.4"
+emmett = "^2.2.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.3"

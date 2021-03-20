@@ -10,7 +10,7 @@
 """
 
 from functools import wraps
-from typing import Callable, List, Optional, Type, Union
+from typing import Any, Callable, List, Optional, Type, Union
 
 from emmett import App
 from emmett.extensions import Extension
@@ -37,16 +37,28 @@ def wrap_module_from_app(ext: Extension) -> Callable[..., RESTModule]:
         serialize_meta: Optional[bool] = None,
         url_prefix: Optional[str] = None,
         hostname: Optional[str] = None,
-        module_class: Optional[Type[RESTModule]] = None
+        module_class: Optional[Type[RESTModule]] = None,
+        **kwargs: Any
     ) -> RESTModule:
         module_class = module_class or ext.config.default_module_class
         return module_class.from_app(
-            ext, import_name, name, model, serializer, parser,
-            enabled_methods, disabled_methods,
-            list_envelope, single_envelope,
-            meta_envelope, groups_envelope,
-            use_envelope_on_parse, serialize_meta,
-            url_prefix, hostname
+            ext,
+            import_name,
+            name,
+            model,
+            serializer=serializer,
+            parser=parser,
+            enabled_methods=enabled_methods,
+            disabled_methods=disabled_methods,
+            list_envelope=list_envelope,
+            single_envelope=single_envelope,
+            meta_envelope=meta_envelope,
+            groups_envelope=groups_envelope,
+            use_envelope_on_parse=use_envelope_on_parse,
+            serialize_meta=serialize_meta,
+            url_prefix=url_prefix,
+            hostname=hostname,
+            opts=kwargs
         )
     return rest_module_from_app
 
@@ -69,16 +81,29 @@ def wrap_module_from_module(ext: Extension) -> Callable[..., RESTModule]:
         serialize_meta: Optional[bool] = None,
         url_prefix: Optional[str] = None,
         hostname: Optional[str] = None,
-        module_class: Optional[Type[RESTModule]] = None
+        module_class: Optional[Type[RESTModule]] = None,
+        **kwargs: Any
     ) -> RESTModule:
         module_class = module_class or ext.config.default_module_class
         return module_class.from_module(
-            ext, mod, import_name, name, model, serializer, parser,
-            enabled_methods, disabled_methods,
-            list_envelope, single_envelope,
-            meta_envelope, groups_envelope,
-            use_envelope_on_parse, serialize_meta,
-            url_prefix, hostname
+            ext,
+            mod,
+            import_name,
+            name,
+            model,
+            serializer=serializer,
+            parser=parser,
+            enabled_methods=enabled_methods,
+            disabled_methods=disabled_methods,
+            list_envelope=list_envelope,
+            single_envelope=single_envelope,
+            meta_envelope=meta_envelope,
+            groups_envelope=groups_envelope,
+            use_envelope_on_parse=use_envelope_on_parse,
+            serialize_meta=serialize_meta,
+            url_prefix=url_prefix,
+            hostname=hostname,
+            opts=kwargs
         )
     return rest_module_from_module
 
