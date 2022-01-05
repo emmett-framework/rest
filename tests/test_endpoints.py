@@ -23,6 +23,10 @@ def db(migration_db):
 def rest_app(app, db):
     app.pipeline = [db.pipe]
     app.rest_module(__name__, 'sample', Sample, url_prefix='sample')
+    app.rest_module(
+        __name__, 'sample_row', Sample,
+        url_prefix='sample_row', use_save=True, use_destroy=True
+    )
     return app
 
 
@@ -40,6 +44,19 @@ def db_sample(db):
 @pytest.fixture(scope='function')
 def client(rest_app):
     return rest_app.test_client()
+
+
+def test_modules(rest_app):
+    mod1 = rest_app._modules['sample']
+    mod2 = rest_app._modules['sample_row']
+
+    assert mod1._functions_map['create'] == '_create'
+    assert mod1._functions_map['update'] == '_update'
+    assert mod1._functions_map['delete'] == '_delete'
+
+    assert mod2._functions_map['create'] == '_create_with_save'
+    assert mod2._functions_map['update'] == '_update_with_save'
+    assert mod2._functions_map['delete'] == '_delete_with_destroy'
 
 
 def test_index(client, json_load):
@@ -66,7 +83,8 @@ def test_get(client, json_load, db):
         data.keys())
 
 
-def test_create(client, json_load, json_dump):
+@pytest.mark.parametrize("base_path", ["/sample", "/sample_row"])
+def test_create(client, json_load, json_dump, base_path):
     body = sdict(
         str='bar',
         int=2,
@@ -74,7 +92,7 @@ def test_create(client, json_load, json_dump):
         datetime=datetime(2000, 1, 1)
     )
     req = client.post(
-        '/sample',
+        base_path,
         data=json_dump(body),
         headers=[('content-type', 'application/json')]
     )
@@ -92,7 +110,7 @@ def test_create(client, json_load, json_dump):
         datetime=datetime(2000, 1, 1)
     )
     req = client.post(
-        '/sample',
+        base_path,
         data=json_dump(body),
         headers=[('content-type', 'application/json')]
     )
@@ -102,7 +120,8 @@ def test_create(client, json_load, json_dump):
     assert data['errors']['int']
 
 
-def test_update(client, json_load, json_dump):
+@pytest.mark.parametrize("base_path", ["/sample", "/sample_row"])
+def test_update(client, json_load, json_dump, base_path):
     body = sdict(
         str='bar',
         int=2,
@@ -110,7 +129,7 @@ def test_update(client, json_load, json_dump):
         datetime=datetime(2000, 1, 1)
     )
     req = client.post(
-        '/sample',
+        base_path,
         data=json_dump(body),
         headers=[('content-type', 'application/json')]
     )
@@ -122,7 +141,7 @@ def test_update(client, json_load, json_dump):
         str='baz'
     )
     req = client.put(
-        f'/sample/{rid}',
+        f'{base_path}/{rid}',
         data=json_dump(change),
         headers=[('content-type', 'application/json')]
     )
@@ -136,7 +155,7 @@ def test_update(client, json_load, json_dump):
         int='baz'
     )
     req = client.put(
-        f'/sample/{rid}',
+        f'{base_path}/{rid}',
         data=json_dump(change),
         headers=[('content-type', 'application/json')]
     )
@@ -146,12 +165,13 @@ def test_update(client, json_load, json_dump):
     assert data['errors']['int']
 
 
-def test_delete(client, db):
+@pytest.mark.parametrize("base_path", ["/sample", "/sample_row"])
+def test_delete(client, db, base_path):
     with db.connection():
         row = Sample.first()
 
     req = client.delete(
-        f'/sample/{row.id}',
+        f'{base_path}/{row.id}',
         headers=[('content-type', 'application/json')]
     )
     assert req.status == 200

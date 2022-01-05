@@ -55,6 +55,8 @@ class RESTModule(AppModule):
         parser: Optional[ParserType] = None,
         enabled_methods: Optional[List] = None,
         disabled_methods: Optional[List] = None,
+        use_save: Optional[bool] = None,
+        use_destroy: Optional[bool] = None,
         list_envelope: Optional[str] = None,
         single_envelope: Optional[Union[str, bool]] = None,
         meta_envelope: Optional[str] = None,
@@ -76,6 +78,8 @@ class RESTModule(AppModule):
             parser=parser,
             enabled_methods=enabled_methods,
             disabled_methods=disabled_methods,
+            use_save=use_save,
+            use_destroy=use_destroy,
             list_envelope=list_envelope,
             single_envelope=single_envelope,
             meta_envelope=meta_envelope,
@@ -101,6 +105,8 @@ class RESTModule(AppModule):
         parser: Optional[ParserType] = None,
         enabled_methods: Optional[List] = None,
         disabled_methods: Optional[List] = None,
+        use_save: Optional[bool] = None,
+        use_destroy: Optional[bool] = None,
         list_envelope: Optional[str] = None,
         single_envelope: Optional[Union[str, bool]] = None,
         meta_envelope: Optional[str] = None,
@@ -132,6 +138,8 @@ class RESTModule(AppModule):
             parser=parser,
             enabled_methods=enabled_methods,
             disabled_methods=disabled_methods,
+            use_save=use_save,
+            use_destroy=use_destroy,
             list_envelope=list_envelope,
             single_envelope=single_envelope,
             meta_envelope=meta_envelope,
@@ -156,6 +164,8 @@ class RESTModule(AppModule):
         parser: Optional[ParserType] = None,
         enabled_methods: Optional[List] = None,
         disabled_methods: Optional[List] = None,
+        use_save: Optional[bool] = None,
+        use_destroy: Optional[bool] = None,
         list_envelope: Optional[str] = None,
         single_envelope: Optional[Union[str, bool]] = None,
         meta_envelope: Optional[str] = None,
@@ -222,6 +232,14 @@ class RESTModule(AppModule):
         self._parser_class = parser or self.ext.config.default_parser
         self._parsing_params_kwargs = {}
         self.model = model
+        self.use_save = (
+            use_save if use_save is not None else
+            self.ext.config.use_save
+        )
+        self.use_destroy = (
+            use_destroy if use_destroy is not None else
+            self.ext.config.use_destroy
+        )
         self.serializer = self._serializer_class(self.model)
         self.parser = self._parser_class(self.model)
         self.enabled_methods = list(self._all_methods & set(
@@ -295,7 +313,7 @@ class RESTModule(AppModule):
 
     def _after_initialize(self):
         self.list_envelope = self.list_envelope or 'data'
-        #: adjust single row serialization based on evenlope
+        #: adjust single row serialization based on envelope
         self.serialize_many = (
             self.serialize_with_list_envelope_and_meta if self.serialize_meta
             else self.serialize_with_list_envelope
@@ -304,8 +322,7 @@ class RESTModule(AppModule):
             self.serialize_one = self.serialize_with_single_envelope
             if self.use_envelope_on_parse:
                 self.parser.envelope = self.single_envelope
-                self._parsing_params_kwargs = \
-                    {'evenlope': self.single_envelope}
+                self._parsing_params_kwargs = {'envelope': self.single_envelope}
         else:
             self.serialize_one = self.serialize
         self.pack_data = (
@@ -333,10 +350,24 @@ class RESTModule(AppModule):
             'stats': (f'{path_base_trail}stats', 'get'),
             'sample': (f'{path_base_trail}sample', 'get')
         }
+        self._functions_map = {
+            **{
+                key: f'_{key}'
+                for key in self._all_methods - {'create', 'update', 'delete'}
+            },
+            **{
+                key: f'_{key}_with_save' if self.use_save else f'_{key}'
+                for key in {'create', 'update'}
+            },
+            **{
+                key: f'_{key}_with_destroy' if self.use_destroy else f'_{key}'
+                for key in {'delete'}
+            }
+        }
         for key in self.enabled_methods:
             path, methods = self._methods_map[key]
             pipeline = getattr(self, key + "_pipeline")
-            f = getattr(self, "_" + key)
+            f = getattr(self, self._functions_map[key])
             self.route(path, pipeline=pipeline, methods=methods, name=key)(f)
 
     def _get_dbset(self) -> DBSet:
@@ -472,11 +503,24 @@ class RESTModule(AppModule):
             callback(r.id)
         return self.serialize_one(r.id)
 
+    async def _create_with_save(self):
+        response.status = 201
+        attrs = await self.parse_params()
+        for callback in self._before_create_callbacks:
+            callback(attrs)
+        r = self.model.new(**attrs)
+        if not r.save():
+            response.status = 422
+            return self.error_422(r.validation_errors, to_dict=False)
+        for callback in self._after_create_callbacks:
+            callback(r)
+        return self.serialize_one(r)
+
     async def _update(self, dbset, rid):
         attrs = await self.parse_params()
         for callback in self._before_update_callbacks:
             callback(rid, attrs)
-        r = dbset.where(self.model.id == rid).validate_and_update(**attrs)
+        r = dbset.where(self.model.table._id == rid).validate_and_update(**attrs)
         if r.errors:
             response.status = 422
             return self.error_422(r.errors)
@@ -488,13 +532,38 @@ class RESTModule(AppModule):
             callback(row)
         return self.serialize_one(row)
 
+    async def _update_with_save(self, dbset, rid):
+        r = dbset.where(self.model.table._id == rid).select().first()
+        if not r:
+            response.status = 404
+            return self.error_404()
+        attrs = await self.parse_params()
+        for callback in self._before_update_callbacks:
+            callback(r, attrs)
+        r.update(**attrs)
+        if not r.save():
+            response.status = 422
+            return self.error_422(r.validation_errors, to_dict=False)
+        for callback in self._after_create_callbacks:
+            callback(r)
+        return self.serialize_one(r)
+
     async def _delete(self, dbset, rid):
-        r = dbset.where(self.model.id == rid).delete()
+        r = dbset.where(self.model.table._id == rid).delete()
         if not r:
             response.status = 404
             return self.error_404()
         for callback in self._after_delete_callbacks:
             callback(rid)
+        return {}
+
+    async def _delete_with_destroy(self, dbset, rid):
+        r = dbset.where(self.model.table._id == rid).select().first()
+        if not r or not r.destroy():
+            response.status = 404
+            return self.error_404()
+        for callback in self._after_delete_callbacks:
+            callback(r)
         return {}
 
     #: additional routes
