@@ -61,6 +61,8 @@ class RESTModule(AppModule):
         groups_envelope: Optional[str] = None,
         use_envelope_on_parse: Optional[bool] = None,
         serialize_meta: Optional[bool] = None,
+        base_path: Optional[str] = None,
+        id_path: Optional[str] = None,
         url_prefix: Optional[str] = None,
         hostname: Optional[str] = None,
         opts: Dict[str, Any] = {}
@@ -80,6 +82,8 @@ class RESTModule(AppModule):
             groups_envelope=groups_envelope,
             use_envelope_on_parse=use_envelope_on_parse,
             serialize_meta=serialize_meta,
+            base_path=base_path,
+            id_path=id_path,
             url_prefix=url_prefix,
             hostname=hostname,
             **opts
@@ -103,6 +107,8 @@ class RESTModule(AppModule):
         groups_envelope: Optional[str] = None,
         use_envelope_on_parse: Optional[bool] = None,
         serialize_meta: Optional[bool] = None,
+        base_path: Optional[str] = None,
+        id_path: Optional[str] = None,
         url_prefix: Optional[str] = None,
         hostname: Optional[str] = None,
         opts: Dict[str, Any] = {}
@@ -132,6 +138,8 @@ class RESTModule(AppModule):
             groups_envelope=groups_envelope,
             use_envelope_on_parse=use_envelope_on_parse,
             serialize_meta=serialize_meta,
+            base_path=base_path,
+            id_path=id_path,
             url_prefix=module_url_prefix,
             hostname=hostname,
             pipeline=mod.pipeline,
@@ -154,11 +162,15 @@ class RESTModule(AppModule):
         groups_envelope: Optional[str] = None,
         use_envelope_on_parse: Optional[bool] = None,
         serialize_meta: Optional[bool] = None,
+        base_path: Optional[str] = None,
+        id_path: Optional[str] = None,
         url_prefix: Optional[str] = None,
         hostname: Optional[str] = None,
         pipeline: List[Pipe] = [],
         **kwargs: Any
     ):
+        if len(model._instance_()._fieldset_pk) > 1:
+            raise RuntimeError("Emmett-REST doesn't support multiple PKs models")
         #: overridable methods
         self._fetcher_method = self._get_dbset
         self._select_method = self._get_row
@@ -203,8 +215,8 @@ class RESTModule(AppModule):
             self._pagination[key] = self.ext.config[key]
         self._sort_param = self.ext.config.sort_param
         self.default_sort = self.ext.config.default_sort
-        self._path_base = self.ext.config.base_path
-        self._path_rid = self.ext.config.id_path
+        self._path_base = base_path or self.ext.config.base_path
+        self._path_rid = id_path or self.ext.config.id_path
         self._serializer_class = serializer or \
             self.ext.config.default_serializer
         self._parser_class = parser or self.ext.config.default_parser
