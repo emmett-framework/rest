@@ -40,8 +40,8 @@ python = "^3.7"
 emmett = { git = "https://github.com/emmett-framework/emmett.git" }
 
 [tool.poetry.dev-dependencies]
-pytest = "^5.3"
-pytest-asyncio = "^0.10"
+pytest = "^6.2"
+pytest-asyncio = "^0.15"
 psycopg2-binary = "~2.8.4"
 pylint = "^2.4.4"
 
