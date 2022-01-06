@@ -22,7 +22,7 @@ def json_load():
     return Parsers.get_for('json')
 
 
-@pytest.yield_fixture(scope='session')
+@pytest.fixture(scope='session')
 def event_loop():
     loop = loops.get('auto')
     yield loop

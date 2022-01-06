@@ -595,11 +595,20 @@ The query language is inspired to the MongoDB query language, and provides the f
 | $nin | `List[Any]` | inverse of $in |
 | $lt | `Union[int, float, str]` | matches values less than specified value |
 | $gt | `Union[int, float, str]` | matches values greater than specified value |
-| $lte | `Union[int, float, str]` | matches values less than or equal to specified value |
-| $gte | `Union[int, float, str]` | matches values greater than or equal to specified value |
+| $le | `Union[int, float, str]` | matches values less than or equal to specified value |
+| $ge | `Union[int, float, str]` | matches values greater than or equal to specified value |
 | $exists | `bool` | matches not null or null values |
 | $regex | `str` | matches specified regex expression |
 | $iregex | `str` | case insensitive $regex |
+| $geo.contains | `GeoDict` | GIS `ST_Contains` |
+| $geo.equals | `GeoDict` | GIS `ST_Equals` |
+| $geo.intersects | `GeoDict` | GIS `ST_Intersects` |
+| $geo.overlaps | `GeoDict` | GIS `ST_Overlaps` |
+| $geo.touches | `GeoDict` | GIS `ST_Touches` |
+| $geo.within | `GeoDict` | GIS `ST_Within` |
+| $geo.dwithin | `GeoDistanceDict` | GIS `ST_DWithin` |
+
+where `GeoDict` indicates a dictionary with only one key indicating the geometry type and with values an array containing the geometry points (eg: `{"point": [1, 2]}`), while `GeoDistanceDict` indicates a `GeoDict` with additional distance value (eg: `{"point": [1, 2], "distance": 5}`).
 
 The JSON condition always have fields' names as keys (except for `$and`, `$or`, `$not`) and operators as values, where `$eq` is the default one:
 
