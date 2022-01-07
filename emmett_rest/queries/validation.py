@@ -49,22 +49,21 @@ def validate_glue(v: Any) -> List[Dict[str, Any]]:
 
 
 def validate_geo(v: Any) -> Any:
-    assert isinstance(v, dict) and len(v.keys()) == 1
-    objkey = list(v.keys())[0]
+    assert isinstance(v, dict) and set(v.keys()) == {'type', 'coordinates'}
+    objkey = v['type']
     geohelper = _geo_helpers.get(objkey.upper())
-    assert geohelper and isinstance(v[objkey], list)
+    assert geohelper and isinstance(v['coordinates'], list)
     try:
-        return geohelper(*_tuplify_list(v[objkey]))
+        return geohelper(*_tuplify_list(v['coordinates']))
     except Exception:
         raise AssertionError
 
 
 def validate_geo_dwithin(v: Any) -> Any:
-    assert isinstance(v, dict) and len(v.keys()) == 2
-    distance = v.pop("distance", None)
-    assert distance
-    obj = validate_geo(v)
-    return (obj, distance)
+    assert isinstance(v, dict) and set(v.keys()) == {'geometry', 'distance'}
+    assert v['distance']
+    obj = validate_geo(v['geometry'])
+    return (obj, v['distance'])
 
 
 op_validators = {

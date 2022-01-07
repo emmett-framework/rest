@@ -608,7 +608,7 @@ The query language is inspired to the MongoDB query language, and provides the f
 | $geo.within | `GeoDict` | GIS `ST_Within` |
 | $geo.dwithin | `GeoDistanceDict` | GIS `ST_DWithin` |
 
-where `GeoDict` indicates a dictionary with only one key indicating the geometry type and with values an array containing the geometry points (eg: `{"point": [1, 2]}`), while `GeoDistanceDict` indicates a `GeoDict` with additional distance value (eg: `{"point": [1, 2], "distance": 5}`).
+where `GeoDict` indicates a dictionary with a `type` key indicating the geometry type and `coordinates` array containing the geometry points (eg: `{"type": "point", "coordinates": [1, 2]}`), while `GeoDistanceDict` indicates a dictionary with a `geometry` key containing a `GeoDict` and the `distance` one (eg: `{"geometry": {"type": "point", "coordinates": [1, 2]}, "distance": 5}`).
 
 The JSON condition always have fields' names as keys (except for `$and`, `$or`, `$not`) and operators as values, where `$eq` is the default one:
 

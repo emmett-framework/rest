@@ -140,7 +140,7 @@ def test_parse_fields(db):
     )
 
     qdict = {
-        'geopoly': {'$geo.contains': {"point": [1, 2]}}
+        'geopoly': {'$geo.contains': {"type": "point", "coordinates": [1, 2]}}
     }
     parsed = parse_conditions(Sample, Sample.all(), qdict, {'geopoly'})
     assert queries_equal(
@@ -151,8 +151,10 @@ def test_parse_fields(db):
     )
 
     qdict = {
-        'geopoint': {'$geo.equals': {"point": [1, 2]}},
-        'geopoly': {'$geo.equals': {"polygon": [[1, 2], [2, 2], [2, 1], [1, 2]]}}
+        'geopoint': {'$geo.equals': {"type": "point", "coordinates": [1, 2]}},
+        'geopoly': {'$geo.equals': {
+            "type": "polygon", "coordinates": [[1, 2], [2, 2], [2, 1], [1, 2]]
+        }}
     }
     parsed = parse_conditions(Sample, Sample.all(), qdict, {'geopoint', 'geopoly'})
     assert queries_equal(
@@ -166,8 +168,12 @@ def test_parse_fields(db):
     )
 
     qdict = {
-        'geopoint': {'$geo.intersects': {"polygon": [[1, 2], [2, 2], [2, 1], [1, 2]]}},
-        'geopoly': {'$geo.intersects': {"polygon": [[1, 2], [2, 2], [2, 1], [1, 2]]}}
+        'geopoint': {'$geo.intersects': {
+            "type": "polygon", "coordinates": [[1, 2], [2, 2], [2, 1], [1, 2]]
+        }},
+        'geopoly': {'$geo.intersects': {
+            "type": "polygon", "coordinates": [[1, 2], [2, 2], [2, 1], [1, 2]]
+        }}
     }
     parsed = parse_conditions(Sample, Sample.all(), qdict, {'geopoint', 'geopoly'})
     assert queries_equal(
@@ -181,8 +187,12 @@ def test_parse_fields(db):
     )
 
     qdict = {
-        'geopoint': {'$geo.overlaps': {"polygon": [[1, 2], [2, 2], [2, 1], [1, 2]]}},
-        'geopoly': {'$geo.overlaps': {"polygon": [[1, 2], [2, 2], [2, 1], [1, 2]]}}
+        'geopoint': {'$geo.overlaps': {
+            "type": "polygon", "coordinates": [[1, 2], [2, 2], [2, 1], [1, 2]]
+        }},
+        'geopoly': {'$geo.overlaps': {
+            "type": "polygon", "coordinates": [[1, 2], [2, 2], [2, 1], [1, 2]]
+        }}
     }
     parsed = parse_conditions(Sample, Sample.all(), qdict, {'geopoint', 'geopoly'})
     assert queries_equal(
@@ -196,8 +206,12 @@ def test_parse_fields(db):
     )
 
     qdict = {
-        'geopoint': {'$geo.touches': {"polygon": [[1, 2], [2, 2], [2, 1], [1, 2]]}},
-        'geopoly': {'$geo.touches': {"polygon": [[1, 2], [2, 2], [2, 1], [1, 2]]}}
+        'geopoint': {'$geo.touches': {
+            "type": "polygon", "coordinates": [[1, 2], [2, 2], [2, 1], [1, 2]]
+        }},
+        'geopoly': {'$geo.touches': {
+            "type": "polygon", "coordinates": [[1, 2], [2, 2], [2, 1], [1, 2]]
+        }}
     }
     parsed = parse_conditions(Sample, Sample.all(), qdict, {'geopoint', 'geopoly'})
     assert queries_equal(
@@ -211,8 +225,12 @@ def test_parse_fields(db):
     )
 
     qdict = {
-        'geopoint': {'$geo.within': {"polygon": [[1, 2], [2, 2], [2, 1], [1, 2]]}},
-        'geopoly': {'$geo.within': {"polygon": [[1, 2], [2, 2], [2, 1], [1, 2]]}}
+        'geopoint': {'$geo.within': {
+            "type": "polygon", "coordinates": [[1, 2], [2, 2], [2, 1], [1, 2]]
+        }},
+        'geopoly': {'$geo.within': {
+            "type": "polygon", "coordinates": [[1, 2], [2, 2], [2, 1], [1, 2]]
+        }}
     }
     parsed = parse_conditions(Sample, Sample.all(), qdict, {'geopoint', 'geopoly'})
     assert queries_equal(
@@ -228,13 +246,19 @@ def test_parse_fields(db):
     qdict = {
         'geopoint': {
             '$geo.dwithin': {
-                "polygon": [[1, 2], [2, 2], [2, 1], [1, 2]],
+                "geometry": {
+                    "type": "polygon",
+                    "coordinates": [[1, 2], [2, 2], [2, 1], [1, 2]]
+                },
                 "distance": 3.2
             }
         },
         'geopoly': {
             '$geo.dwithin': {
-                "polygon": [[1, 2], [2, 2], [2, 1], [1, 2]],
+                "geometry": {
+                    "type": "polygon",
+                    "coordinates": [[1, 2], [2, 2], [2, 1], [1, 2]]
+                },
                 "distance": 4
             }
         }
