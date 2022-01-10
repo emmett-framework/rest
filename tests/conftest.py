@@ -45,6 +45,8 @@ def db_config():
 def app(event_loop, db_config):
     rv = App(__name__)
     rv.config.db = db_config
+    rv.config.REST.use_save = False
+    rv.config.REST.use_destroy = False
     rv.use_extension(REST)
     return rv
 

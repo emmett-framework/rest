@@ -22,7 +22,10 @@ def db(migration_db):
 @pytest.fixture(scope='function')
 def rest_app(app, db):
     app.pipeline = [db.pipe]
-    app.rest_module(__name__, 'sample', Sample, url_prefix='sample')
+    app.rest_module(
+        __name__, 'sample', Sample,
+        url_prefix='sample'
+    )
     app.rest_module(
         __name__, 'sample_row', Sample,
         url_prefix='sample_row', use_save=True, use_destroy=True
@@ -50,13 +53,13 @@ def test_modules(rest_app):
     mod1 = rest_app._modules['sample']
     mod2 = rest_app._modules['sample_row']
 
-    assert mod1._functions_map['create'] == '_create'
-    assert mod1._functions_map['update'] == '_update'
-    assert mod1._functions_map['delete'] == '_delete'
+    assert mod1._functions_map['create'] == '_create_without_save'
+    assert mod1._functions_map['update'] == '_update_without_save'
+    assert mod1._functions_map['delete'] == '_delete_without_destroy'
 
-    assert mod2._functions_map['create'] == '_create_with_save'
-    assert mod2._functions_map['update'] == '_update_with_save'
-    assert mod2._functions_map['delete'] == '_delete_with_destroy'
+    assert mod2._functions_map['create'] == '_create'
+    assert mod2._functions_map['update'] == '_update'
+    assert mod2._functions_map['delete'] == '_delete'
 
 
 def test_index(client, json_load):

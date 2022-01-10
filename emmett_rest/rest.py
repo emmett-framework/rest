@@ -356,11 +356,11 @@ class RESTModule(AppModule):
                 for key in self._all_methods - {'create', 'update', 'delete'}
             },
             **{
-                key: f'_{key}_with_save' if self.use_save else f'_{key}'
+                key: f'_{key}_without_save' if not self.use_save else f'_{key}'
                 for key in {'create', 'update'}
             },
             **{
-                key: f'_{key}_with_destroy' if self.use_destroy else f'_{key}'
+                key: f'_{key}_without_destroy' if not self.use_destroy else f'_{key}'
                 for key in {'delete'}
             }
         }
@@ -425,7 +425,7 @@ class RESTModule(AppModule):
 
     def build_error_422(self, errors=None, to_dict=True):
         if errors:
-            if to_dict:
+            if to_dict and hasattr(errors, "as_dict"):
                 errors = errors.as_dict()
             return {'errors': errors}
         return {'errors': {'request': 'unprocessable entity'}}
@@ -495,19 +495,6 @@ class RESTModule(AppModule):
         attrs = await self.parse_params()
         for callback in self._before_create_callbacks:
             callback(attrs)
-        r = self.model.create(**attrs)
-        if r.errors:
-            response.status = 422
-            return self.error_422(r.errors)
-        for callback in self._after_create_callbacks:
-            callback(r.id)
-        return self.serialize_one(r.id)
-
-    async def _create_with_save(self):
-        response.status = 201
-        attrs = await self.parse_params()
-        for callback in self._before_create_callbacks:
-            callback(attrs)
         r = self.model.new(**attrs)
         if not r.save():
             response.status = 422
@@ -516,23 +503,20 @@ class RESTModule(AppModule):
             callback(r)
         return self.serialize_one(r)
 
-    async def _update(self, dbset, rid):
+    async def _create_without_save(self):
+        response.status = 201
         attrs = await self.parse_params()
-        for callback in self._before_update_callbacks:
-            callback(rid, attrs)
-        r = dbset.where(self.model.table._id == rid).validate_and_update(**attrs)
+        for callback in self._before_create_callbacks:
+            callback(attrs)
+        r = self.model.create(**attrs)
         if r.errors:
             response.status = 422
             return self.error_422(r.errors)
-        elif not r.updated:
-            response.status = 404
-            return self.error_404()
-        row = self.model.get(rid)
-        for callback in self._after_update_callbacks:
-            callback(row)
-        return self.serialize_one(row)
+        for callback in self._after_create_callbacks:
+            callback(r.id)
+        return self.serialize_one(r.id)
 
-    async def _update_with_save(self, dbset, rid):
+    async def _update(self, dbset, rid):
         r = dbset.where(self.model.table._id == rid).select().first()
         if not r:
             response.status = 404
@@ -548,22 +532,38 @@ class RESTModule(AppModule):
             callback(r)
         return self.serialize_one(r)
 
-    async def _delete(self, dbset, rid):
-        r = dbset.where(self.model.table._id == rid).delete()
-        if not r:
+    async def _update_without_save(self, dbset, rid):
+        attrs = await self.parse_params()
+        for callback in self._before_update_callbacks:
+            callback(rid, attrs)
+        r = dbset.where(self.model.table._id == rid).validate_and_update(**attrs)
+        if r.errors:
+            response.status = 422
+            return self.error_422(r.errors)
+        elif not r.updated:
             response.status = 404
             return self.error_404()
-        for callback in self._after_delete_callbacks:
-            callback(rid)
-        return {}
+        row = self.model.get(rid)
+        for callback in self._after_update_callbacks:
+            callback(row)
+        return self.serialize_one(row)
 
-    async def _delete_with_destroy(self, dbset, rid):
+    async def _delete(self, dbset, rid):
         r = dbset.where(self.model.table._id == rid).select().first()
         if not r or not r.destroy():
             response.status = 404
             return self.error_404()
         for callback in self._after_delete_callbacks:
             callback(r)
+        return {}
+
+    async def _delete_without_destroy(self, dbset, rid):
+        r = dbset.where(self.model.table._id == rid).delete()
+        if not r:
+            response.status = 404
+            return self.error_404()
+        for callback in self._after_delete_callbacks:
+            callback(rid)
         return {}
 
     #: additional routes

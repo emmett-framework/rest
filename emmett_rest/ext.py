@@ -47,8 +47,8 @@ class REST(Extension):
             'index', 'create', 'read', 'update', 'delete'
         ],
         default_disabled_methods=[],
-        use_save=False,
-        use_destroy=False
+        use_save=True,
+        use_destroy=True
     )
 
     def __init__(self, *args, **kwargs):

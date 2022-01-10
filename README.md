@@ -161,12 +161,16 @@ The `rest_module` method accepts several parameters (*bold ones are required*) f
 | parser | `None` | a class to be used for parsing |
 | enabled\_methods | `str` list: index, create, read, update, delete | the routes that should be enabled on the module |
 | disabled\_methods | `[]` | the routes that should be disabled on the module |
+| use\_save | `True` | |
+| use\_destroy | `True` | |
 | list\_envelope | data | the envelope to use on the index route |
 | single\_envelope | `False` | the envelope to use on all the routes except for lists endpoints |
 | meta\_envelope | meta | the envelope to use for meta data |
 | groups\_envelope | data | the envelope to use for the grouping endpoint |
 | use\_envelope\_on\_parse | `False` | if set to `True` will use the envelope specified in *single_envelope* option also on parsing |
 | serialize\_meta | `True` | whether to serialize meta data on lists endpoint |
+| base\_path | `None` | |
+| id\_path | `None` | |
 | url\_prefix | `None` | as for standard modules |
 | hostname | `None` | as for standard modules |
 | module\_class | `RestModule` | the module class to use |
@@ -260,11 +264,11 @@ The *read* method should accept the `row` parameter that is injected by the modu
 async def task_new():
     response.status = 201
     attrs = await tasks.parse_params()
-    r = Task.create(**attrs)
-    if r.errors:
+    row = Task.new(**attrs)
+    if not row.save()::
         response.status = 422
-        return tasks.error_422(r.errors)
-    return tasks.serialize_one(r.id)
+        return tasks.error_422(row.validation_errors)
+    return tasks.serialize_one(row)
 ```
 
 The *create* method won't need any parameters, and is responsible of creating new records in the database.
@@ -273,22 +277,22 @@ The *create* method won't need any parameters, and is responsible of creating ne
 @tasks.update()
 async def task_edit(dbset, rid):
     attrs = await tasks.parse_params()
-    r = dbset.where(Task.id == rid).validate_and_update(**attrs)
-    if r.errors:
-        response.status = 422
-        return tasks.error_422(r.errors)
-    elif not r.updated:
+    row = dbset.where(Task.id == rid).select().first()
+    if not row:
         response.status = 404
         return tasks.error_404()
-    row = Task.get(rid)
+    row.update(**attrs)
+    if not row.save():
+        response.status = 422
+        return tasks.error_422(row.validation_errors)
     return tasks.serialize_one(row)
 ```
 
 ```python
 @tasks.delete()
 async def task_del(dbset, rid):
-    r = dbset.where(Task.id == rid).delete()
-    if not r:
+    row = dbset.where(Task.id == rid).select().first()
+    if not row or not row.destroy():
         response.status = 404
         return self.error_404()
     return {}
@@ -319,7 +323,7 @@ def task_404err():
     
 @tasks.on_422
 def task_422err(errors):
-    return {'error': 422, 'validation': errors.as_dict()}
+    return {'error': 422, 'validation': errors}
 ```
 
 ### Customizing meta generation
@@ -653,6 +657,8 @@ app.config.REST.default_enabled_methods = [
     'delete'
 ]
 app.config.REST.default_disabled_methods = []
+app.config.REST.use_save = True
+app.config.REST.use_destroy = True
 ```
 
 This configuration will be used by all the REST modules you create, unless overridden.
