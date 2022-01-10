@@ -568,7 +568,7 @@ class RESTModule(AppModule):
 
     #: additional routes
     async def _group(self, dbset, field):
-        count_field = self.model.id.count()
+        count_field = self.model.table._id.count()
         sort = self.get_sort(
             default='count',
             allowed_fields={'count': count_field}
