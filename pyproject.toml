@@ -37,7 +37,7 @@ include = [
 
 [tool.poetry.dependencies]
 python = "^3.7"
-emmett = { git = "https://github.com/emmett-framework/emmett.git" }
+emmett = "^2.4"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2"
