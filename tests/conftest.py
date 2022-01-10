@@ -22,7 +22,7 @@ def json_load():
     return Parsers.get_for('json')
 
 
-@pytest.yield_fixture(scope='session')
+@pytest.fixture(scope='session')
 def event_loop():
     loop = loops.get('auto')
     yield loop
@@ -45,6 +45,8 @@ def db_config():
 def app(event_loop, db_config):
     rv = App(__name__)
     rv.config.db = db_config
+    rv.config.REST.use_save = False
+    rv.config.REST.use_destroy = False
     rv.use_extension(REST)
     return rv
 

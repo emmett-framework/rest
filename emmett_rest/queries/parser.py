@@ -31,15 +31,41 @@ _query_operators = {
     '$neq': operator.ne,
     '$lt': operator.lt,
     '$gt': operator.gt,
+    '$le': operator.le,
+    '$ge': operator.ge,
     '$lte': operator.le,
     '$gte': operator.ge,
     '$in': lambda field, value: operator.methodcaller('belongs', value)(field),
     '$exists': lambda field, value: (
-        operator.ne(field, None) if value else operator.eq(field, None)),
+        operator.ne(field, None) if value else operator.eq(field, None)
+    ),
     '$regex': lambda field, value: (
-        operator.methodcaller('contains', value, case_sensitive=True)(field)),
+        operator.methodcaller('contains', value, case_sensitive=True)(field)
+    ),
     '$iregex': lambda field, value: (
-        operator.methodcaller('contains', value)(field))
+        operator.methodcaller('contains', value)(field)
+    ),
+    '$geo.contains': lambda field, value: (
+        operator.methodcaller('st_contains', value)(field)
+    ),
+    '$geo.equals': lambda field, value: (
+        operator.methodcaller('st_equals', value)(field)
+    ),
+    '$geo.intersects': lambda field, value: (
+        operator.methodcaller('st_intersects', value)(field)
+    ),
+    '$geo.overlaps': lambda field, value: (
+        operator.methodcaller('st_overlaps', value)(field)
+    ),
+    '$geo.touches': lambda field, value: (
+        operator.methodcaller('st_touches', value)(field)
+    ),
+    '$geo.within': lambda field, value: (
+        operator.methodcaller('st_within', value)(field)
+    ),
+    '$geo.dwithin': lambda field, value: (
+        operator.methodcaller('st_dwithin', value[0], value[1])(field)
+    )
 }
 
 

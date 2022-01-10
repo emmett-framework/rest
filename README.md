@@ -55,7 +55,7 @@ app.use_extension(REST)
 
 ## Usage
 
-The Emmett-REST extension is intended to be used with Emmett models, and it uses application modules to build APIs over them. 
+The Emmett-REST extension is intended to be used with Emmett [models](https://emmett.sh/docs/latest/orm/models), and it uses application modules to build APIs over them. 
 
 Let's say, for example, that you have a task manager app with a `Task` model:
 
@@ -161,12 +161,16 @@ The `rest_module` method accepts several parameters (*bold ones are required*) f
 | parser | `None` | a class to be used for parsing |
 | enabled\_methods | `str` list: index, create, read, update, delete | the routes that should be enabled on the module |
 | disabled\_methods | `[]` | the routes that should be disabled on the module |
+| use\_save | `True` | whether to use the `save` method in records to perform operations or the low-level ORM APIs |
+| use\_destroy | `True` | whether to use the `destroy` method in records to perform operations or the low-level ORM APIs |
 | list\_envelope | data | the envelope to use on the index route |
 | single\_envelope | `False` | the envelope to use on all the routes except for lists endpoints |
 | meta\_envelope | meta | the envelope to use for meta data |
 | groups\_envelope | data | the envelope to use for the grouping endpoint |
 | use\_envelope\_on\_parse | `False` | if set to `True` will use the envelope specified in *single_envelope* option also on parsing |
 | serialize\_meta | `True` | whether to serialize meta data on lists endpoint |
+| base\_path | `/` | the default path prefix for routes not involving a single record |
+| id\_path | `/<int:rid>` | the default path prefix for routes involving a single record |
 | url\_prefix | `None` | as for standard modules |
 | hostname | `None` | as for standard modules |
 | module\_class | `RestModule` | the module class to use |
@@ -260,41 +264,47 @@ The *read* method should accept the `row` parameter that is injected by the modu
 async def task_new():
     response.status = 201
     attrs = await tasks.parse_params()
-    r = Task.create(**attrs)
-    if r.errors:
+    row = Task.new(**attrs)
+    if not row.save()::
         response.status = 422
-        return tasks.error_422(r.errors)
-    return tasks.serialize_one(r.id)
+        return tasks.error_422(row.validation_errors)
+    return tasks.serialize_one(row)
 ```
 
 The *create* method won't need any parameters, and is responsible of creating new records in the database.
+
+> **Note:** since Emmett 2.4, a `save` method is available on records. Emmett-REST acts accordingly to the `use_save` configuration parameter (in extension configuration or module initialization), using `Model.create` when saving is disabled.
+
+The *update* and *delete* methods are quite similar:
 
 ```python
 @tasks.update()
 async def task_edit(dbset, rid):
     attrs = await tasks.parse_params()
-    r = dbset.where(Task.id == rid).validate_and_update(**attrs)
-    if r.errors:
-        response.status = 422
-        return tasks.error_422(r.errors)
-    elif not r.updated:
+    row = dbset.where(Task.id == rid).select().first()
+    if not row:
         response.status = 404
         return tasks.error_404()
-    row = Task.get(rid)
+    row.update(**attrs)
+    if not row.save():
+        response.status = 422
+        return tasks.error_422(row.validation_errors)
     return tasks.serialize_one(row)
 ```
 
 ```python
 @tasks.delete()
 async def task_del(dbset, rid):
-    r = dbset.where(Task.id == rid).delete()
-    if not r:
+    row = dbset.where(Task.id == rid).select().first()
+    if not row or not row.destroy():
         response.status = 404
         return self.error_404()
     return {}
 ```
 
-The *update* and *delete* methods are quite similar, since they should accept the `dbset` parameter and the `rid` one, which will be the record id requested by the client.
+since, as you can see, they should accept the `dbset` parameter and the `rid` one, which will be the record id requested by the client.
+
+> **Note:** since Emmett 2.4, `save` and `destroy` method are available on records. Emmett-REST acts accordingly to the `use_save` and `use_destroy` configuration parameter (in extension configuration or module initialization), using `dbset.update` and `dbset.delete` when saving and/or destroying is disabled.
 
 All the decorators accept an additional `pipeline` parameter that you can use to add custom pipes to the routed function:
 
@@ -319,7 +329,7 @@ def task_404err():
     
 @tasks.on_422
 def task_422err(errors):
-    return {'error': 422, 'validation': errors.as_dict()}
+    return {'error': 422, 'validation': errors}
 ```
 
 ### Customizing meta generation
@@ -562,11 +572,11 @@ Unless overridden, the default `create`, `update` and `delete` methods invoke ca
 | callback | arguments| description |
 | --- | --- | --- |
 | before\_create | `[sdict]` | called before the record insertion |
-| before\_update | `[int, sdict]` | called before the record gets update |
+| before\_update | `[id\|Row, sdict]` | called before the record gets update (when saving is disabled, the first argument is the id of the record, otherwise the record to be updated) |
 | after\_parse\_params | `[sdict]` | called after params are loaded from the request body |
 | after\_create | `[Row]` | called after the record insertion |
 | after\_update | `[Row]` | called after the record gets updated |
-| after\_delete | `[int]` | called after the record gets deleted |
+| after\_delete | `[id\|Row]` | called after the record gets deleted (when destroying is disabled, the argument is the id of the record, otherwise the destroyed record) |
 
 For example, you might need to notify some changes:
 
@@ -595,11 +605,20 @@ The query language is inspired to the MongoDB query language, and provides the f
 | $nin | `List[Any]` | inverse of $in |
 | $lt | `Union[int, float, str]` | matches values less than specified value |
 | $gt | `Union[int, float, str]` | matches values greater than specified value |
-| $lte | `Union[int, float, str]` | matches values less than or equal to specified value |
-| $gte | `Union[int, float, str]` | matches values greater than or equal to specified value |
+| $le | `Union[int, float, str]` | matches values less than or equal to specified value |
+| $ge | `Union[int, float, str]` | matches values greater than or equal to specified value |
 | $exists | `bool` | matches not null or null values |
 | $regex | `str` | matches specified regex expression |
 | $iregex | `str` | case insensitive $regex |
+| $geo.contains | `GeoDict` | GIS `ST_Contains` |
+| $geo.equals | `GeoDict` | GIS `ST_Equals` |
+| $geo.intersects | `GeoDict` | GIS `ST_Intersects` |
+| $geo.overlaps | `GeoDict` | GIS `ST_Overlaps` |
+| $geo.touches | `GeoDict` | GIS `ST_Touches` |
+| $geo.within | `GeoDict` | GIS `ST_Within` |
+| $geo.dwithin | `GeoDistanceDict` | GIS `ST_DWithin` |
+
+where `GeoDict` indicates a dictionary with a `type` key indicating the geometry type and `coordinates` array containing the geometry points (eg: `{"type": "point", "coordinates": [1, 2]}`), while `GeoDistanceDict` indicates a dictionary with a `geometry` key containing a `GeoDict` and the `distance` one (eg: `{"geometry": {"type": "point", "coordinates": [1, 2]}, "distance": 5}`).
 
 The JSON condition always have fields' names as keys (except for `$and`, `$or`, `$not`) and operators as values, where `$eq` is the default one:
 
@@ -629,7 +648,7 @@ app.config.REST.max_pagesize = 25
 app.config.REST.default_pagesize = 20
 app.config.REST.default_sort = 'id'
 app.config.REST.base_path = '/'
-app.config.REST.base_id_path = '/<int:rid>'
+app.config.REST.id_path = '/<int:rid>'
 app.config.REST.list_envelope = 'data'
 app.config.REST.single_envelope = False
 app.config.REST.groups_envelope = 'data'
@@ -644,6 +663,8 @@ app.config.REST.default_enabled_methods = [
     'delete'
 ]
 app.config.REST.default_disabled_methods = []
+app.config.REST.use_save = True
+app.config.REST.use_destroy = True
 ```
 
 This configuration will be used by all the REST modules you create, unless overridden.

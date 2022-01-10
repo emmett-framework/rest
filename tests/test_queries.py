@@ -4,7 +4,7 @@ import pytest
 
 from pydal.objects import Query
 from emmett import sdict, current, now
-from emmett.orm import Field, Model
+from emmett.orm import Field, Model, geo
 from emmett_rest.queries import JSONQueryPipe
 from emmett_rest.queries.parser import parse_conditions
 
@@ -14,6 +14,8 @@ class Sample(Model):
     int = Field.int()
     float = Field.float()
     datetime = Field.datetime()
+    geopoint = Field.geography("POINT")
+    geopoly = Field.geometry("POLYGON")
 
 
 @pytest.fixture(scope='function')
@@ -134,6 +136,145 @@ def test_parse_fields(db):
         parsed.query,
         Sample.all().where(
             lambda m: (m.datetime >= dt1) & (m.datetime < dt2)
+        ).query
+    )
+
+    qdict = {
+        'geopoly': {'$geo.contains': {"type": "point", "coordinates": [1, 2]}}
+    }
+    parsed = parse_conditions(Sample, Sample.all(), qdict, {'geopoly'})
+    assert queries_equal(
+        parsed.query,
+        Sample.all().where(
+            lambda m: m.geopoly.st_contains(geo.Point(1, 2))
+        ).query
+    )
+
+    qdict = {
+        'geopoint': {'$geo.equals': {"type": "point", "coordinates": [1, 2]}},
+        'geopoly': {'$geo.equals': {
+            "type": "polygon", "coordinates": [[1, 2], [2, 2], [2, 1], [1, 2]]
+        }}
+    }
+    parsed = parse_conditions(Sample, Sample.all(), qdict, {'geopoint', 'geopoly'})
+    assert queries_equal(
+        parsed.query,
+        Sample.all().where(
+            lambda m: (
+                m.geopoint.st_equals(geo.Point(1, 2)) &
+                m.geopoly.st_equals(geo.Polygon((1, 2), (2, 2), (2, 1), (1, 2)))
+            )
+        ).query
+    )
+
+    qdict = {
+        'geopoint': {'$geo.intersects': {
+            "type": "polygon", "coordinates": [[1, 2], [2, 2], [2, 1], [1, 2]]
+        }},
+        'geopoly': {'$geo.intersects': {
+            "type": "polygon", "coordinates": [[1, 2], [2, 2], [2, 1], [1, 2]]
+        }}
+    }
+    parsed = parse_conditions(Sample, Sample.all(), qdict, {'geopoint', 'geopoly'})
+    assert queries_equal(
+        parsed.query,
+        Sample.all().where(
+            lambda m: (
+                m.geopoint.st_intersects(geo.Polygon((1, 2), (2, 2), (2, 1), (1, 2))) &
+                m.geopoly.st_intersects(geo.Polygon((1, 2), (2, 2), (2, 1), (1, 2)))
+            )
+        ).query
+    )
+
+    qdict = {
+        'geopoint': {'$geo.overlaps': {
+            "type": "polygon", "coordinates": [[1, 2], [2, 2], [2, 1], [1, 2]]
+        }},
+        'geopoly': {'$geo.overlaps': {
+            "type": "polygon", "coordinates": [[1, 2], [2, 2], [2, 1], [1, 2]]
+        }}
+    }
+    parsed = parse_conditions(Sample, Sample.all(), qdict, {'geopoint', 'geopoly'})
+    assert queries_equal(
+        parsed.query,
+        Sample.all().where(
+            lambda m: (
+                m.geopoint.st_overlaps(geo.Polygon((1, 2), (2, 2), (2, 1), (1, 2))) &
+                m.geopoly.st_overlaps(geo.Polygon((1, 2), (2, 2), (2, 1), (1, 2)))
+            )
+        ).query
+    )
+
+    qdict = {
+        'geopoint': {'$geo.touches': {
+            "type": "polygon", "coordinates": [[1, 2], [2, 2], [2, 1], [1, 2]]
+        }},
+        'geopoly': {'$geo.touches': {
+            "type": "polygon", "coordinates": [[1, 2], [2, 2], [2, 1], [1, 2]]
+        }}
+    }
+    parsed = parse_conditions(Sample, Sample.all(), qdict, {'geopoint', 'geopoly'})
+    assert queries_equal(
+        parsed.query,
+        Sample.all().where(
+            lambda m: (
+                m.geopoint.st_touches(geo.Polygon((1, 2), (2, 2), (2, 1), (1, 2))) &
+                m.geopoly.st_touches(geo.Polygon((1, 2), (2, 2), (2, 1), (1, 2)))
+            )
+        ).query
+    )
+
+    qdict = {
+        'geopoint': {'$geo.within': {
+            "type": "polygon", "coordinates": [[1, 2], [2, 2], [2, 1], [1, 2]]
+        }},
+        'geopoly': {'$geo.within': {
+            "type": "polygon", "coordinates": [[1, 2], [2, 2], [2, 1], [1, 2]]
+        }}
+    }
+    parsed = parse_conditions(Sample, Sample.all(), qdict, {'geopoint', 'geopoly'})
+    assert queries_equal(
+        parsed.query,
+        Sample.all().where(
+            lambda m: (
+                m.geopoint.st_within(geo.Polygon((1, 2), (2, 2), (2, 1), (1, 2))) &
+                m.geopoly.st_within(geo.Polygon((1, 2), (2, 2), (2, 1), (1, 2)))
+            )
+        ).query
+    )
+
+    qdict = {
+        'geopoint': {
+            '$geo.dwithin': {
+                "geometry": {
+                    "type": "polygon",
+                    "coordinates": [[1, 2], [2, 2], [2, 1], [1, 2]]
+                },
+                "distance": 3.2
+            }
+        },
+        'geopoly': {
+            '$geo.dwithin': {
+                "geometry": {
+                    "type": "polygon",
+                    "coordinates": [[1, 2], [2, 2], [2, 1], [1, 2]]
+                },
+                "distance": 4
+            }
+        }
+    }
+    parsed = parse_conditions(Sample, Sample.all(), qdict, {'geopoint', 'geopoly'})
+    assert queries_equal(
+        parsed.query,
+        Sample.all().where(
+            lambda m: (
+                m.geopoint.st_dwithin(
+                    geo.Polygon((1, 2), (2, 2), (2, 1), (1, 2)), 3.2
+                ) &
+                m.geopoly.st_dwithin(
+                    geo.Polygon((1, 2), (2, 2), (2, 1), (1, 2)), 4
+                )
+            )
         ).query
     )
 

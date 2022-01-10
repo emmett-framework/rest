@@ -55,12 +55,16 @@ class RESTModule(AppModule):
         parser: Optional[ParserType] = None,
         enabled_methods: Optional[List] = None,
         disabled_methods: Optional[List] = None,
+        use_save: Optional[bool] = None,
+        use_destroy: Optional[bool] = None,
         list_envelope: Optional[str] = None,
         single_envelope: Optional[Union[str, bool]] = None,
         meta_envelope: Optional[str] = None,
         groups_envelope: Optional[str] = None,
         use_envelope_on_parse: Optional[bool] = None,
         serialize_meta: Optional[bool] = None,
+        base_path: Optional[str] = None,
+        id_path: Optional[str] = None,
         url_prefix: Optional[str] = None,
         hostname: Optional[str] = None,
         opts: Dict[str, Any] = {}
@@ -74,12 +78,16 @@ class RESTModule(AppModule):
             parser=parser,
             enabled_methods=enabled_methods,
             disabled_methods=disabled_methods,
+            use_save=use_save,
+            use_destroy=use_destroy,
             list_envelope=list_envelope,
             single_envelope=single_envelope,
             meta_envelope=meta_envelope,
             groups_envelope=groups_envelope,
             use_envelope_on_parse=use_envelope_on_parse,
             serialize_meta=serialize_meta,
+            base_path=base_path,
+            id_path=id_path,
             url_prefix=url_prefix,
             hostname=hostname,
             **opts
@@ -97,12 +105,16 @@ class RESTModule(AppModule):
         parser: Optional[ParserType] = None,
         enabled_methods: Optional[List] = None,
         disabled_methods: Optional[List] = None,
+        use_save: Optional[bool] = None,
+        use_destroy: Optional[bool] = None,
         list_envelope: Optional[str] = None,
         single_envelope: Optional[Union[str, bool]] = None,
         meta_envelope: Optional[str] = None,
         groups_envelope: Optional[str] = None,
         use_envelope_on_parse: Optional[bool] = None,
         serialize_meta: Optional[bool] = None,
+        base_path: Optional[str] = None,
+        id_path: Optional[str] = None,
         url_prefix: Optional[str] = None,
         hostname: Optional[str] = None,
         opts: Dict[str, Any] = {}
@@ -126,12 +138,16 @@ class RESTModule(AppModule):
             parser=parser,
             enabled_methods=enabled_methods,
             disabled_methods=disabled_methods,
+            use_save=use_save,
+            use_destroy=use_destroy,
             list_envelope=list_envelope,
             single_envelope=single_envelope,
             meta_envelope=meta_envelope,
             groups_envelope=groups_envelope,
             use_envelope_on_parse=use_envelope_on_parse,
             serialize_meta=serialize_meta,
+            base_path=base_path,
+            id_path=id_path,
             url_prefix=module_url_prefix,
             hostname=hostname,
             pipeline=mod.pipeline,
@@ -148,17 +164,23 @@ class RESTModule(AppModule):
         parser: Optional[ParserType] = None,
         enabled_methods: Optional[List] = None,
         disabled_methods: Optional[List] = None,
+        use_save: Optional[bool] = None,
+        use_destroy: Optional[bool] = None,
         list_envelope: Optional[str] = None,
         single_envelope: Optional[Union[str, bool]] = None,
         meta_envelope: Optional[str] = None,
         groups_envelope: Optional[str] = None,
         use_envelope_on_parse: Optional[bool] = None,
         serialize_meta: Optional[bool] = None,
+        base_path: Optional[str] = None,
+        id_path: Optional[str] = None,
         url_prefix: Optional[str] = None,
         hostname: Optional[str] = None,
         pipeline: List[Pipe] = [],
         **kwargs: Any
     ):
+        if len(model._instance_()._fieldset_pk) > 1:
+            raise RuntimeError("Emmett-REST doesn't support multiple PKs models")
         #: overridable methods
         self._fetcher_method = self._get_dbset
         self._select_method = self._get_row
@@ -203,13 +225,21 @@ class RESTModule(AppModule):
             self._pagination[key] = self.ext.config[key]
         self._sort_param = self.ext.config.sort_param
         self.default_sort = self.ext.config.default_sort
-        self._path_base = self.ext.config.base_path
-        self._path_rid = self.ext.config.id_path
+        self._path_base = base_path or self.ext.config.base_path
+        self._path_rid = id_path or self.ext.config.id_path
         self._serializer_class = serializer or \
             self.ext.config.default_serializer
         self._parser_class = parser or self.ext.config.default_parser
         self._parsing_params_kwargs = {}
         self.model = model
+        self.use_save = (
+            use_save if use_save is not None else
+            self.ext.config.use_save
+        )
+        self.use_destroy = (
+            use_destroy if use_destroy is not None else
+            self.ext.config.use_destroy
+        )
         self.serializer = self._serializer_class(self.model)
         self.parser = self._parser_class(self.model)
         self.enabled_methods = list(self._all_methods & set(
@@ -283,7 +313,7 @@ class RESTModule(AppModule):
 
     def _after_initialize(self):
         self.list_envelope = self.list_envelope or 'data'
-        #: adjust single row serialization based on evenlope
+        #: adjust single row serialization based on envelope
         self.serialize_many = (
             self.serialize_with_list_envelope_and_meta if self.serialize_meta
             else self.serialize_with_list_envelope
@@ -292,8 +322,7 @@ class RESTModule(AppModule):
             self.serialize_one = self.serialize_with_single_envelope
             if self.use_envelope_on_parse:
                 self.parser.envelope = self.single_envelope
-                self._parsing_params_kwargs = \
-                    {'evenlope': self.single_envelope}
+                self._parsing_params_kwargs = {'envelope': self.single_envelope}
         else:
             self.serialize_one = self.serialize
         self.pack_data = (
@@ -321,10 +350,24 @@ class RESTModule(AppModule):
             'stats': (f'{path_base_trail}stats', 'get'),
             'sample': (f'{path_base_trail}sample', 'get')
         }
+        self._functions_map = {
+            **{
+                key: f'_{key}'
+                for key in self._all_methods - {'create', 'update', 'delete'}
+            },
+            **{
+                key: f'_{key}_without_save' if not self.use_save else f'_{key}'
+                for key in {'create', 'update'}
+            },
+            **{
+                key: f'_{key}_without_destroy' if not self.use_destroy else f'_{key}'
+                for key in {'delete'}
+            }
+        }
         for key in self.enabled_methods:
             path, methods = self._methods_map[key]
             pipeline = getattr(self, key + "_pipeline")
-            f = getattr(self, "_" + key)
+            f = getattr(self, self._functions_map[key])
             self.route(path, pipeline=pipeline, methods=methods, name=key)(f)
 
     def _get_dbset(self) -> DBSet:
@@ -382,7 +425,7 @@ class RESTModule(AppModule):
 
     def build_error_422(self, errors=None, to_dict=True):
         if errors:
-            if to_dict:
+            if to_dict and hasattr(errors, "as_dict"):
                 errors = errors.as_dict()
             return {'errors': errors}
         return {'errors': {'request': 'unprocessable entity'}}
@@ -452,6 +495,19 @@ class RESTModule(AppModule):
         attrs = await self.parse_params()
         for callback in self._before_create_callbacks:
             callback(attrs)
+        r = self.model.new(**attrs)
+        if not r.save():
+            response.status = 422
+            return self.error_422(r.validation_errors, to_dict=False)
+        for callback in self._after_create_callbacks:
+            callback(r)
+        return self.serialize_one(r)
+
+    async def _create_without_save(self):
+        response.status = 201
+        attrs = await self.parse_params()
+        for callback in self._before_create_callbacks:
+            callback(attrs)
         r = self.model.create(**attrs)
         if r.errors:
             response.status = 422
@@ -461,10 +517,26 @@ class RESTModule(AppModule):
         return self.serialize_one(r.id)
 
     async def _update(self, dbset, rid):
+        r = dbset.where(self.model.table._id == rid).select().first()
+        if not r:
+            response.status = 404
+            return self.error_404()
+        attrs = await self.parse_params()
+        for callback in self._before_update_callbacks:
+            callback(r, attrs)
+        r.update(**attrs)
+        if not r.save():
+            response.status = 422
+            return self.error_422(r.validation_errors, to_dict=False)
+        for callback in self._after_create_callbacks:
+            callback(r)
+        return self.serialize_one(r)
+
+    async def _update_without_save(self, dbset, rid):
         attrs = await self.parse_params()
         for callback in self._before_update_callbacks:
             callback(rid, attrs)
-        r = dbset.where(self.model.id == rid).validate_and_update(**attrs)
+        r = dbset.where(self.model.table._id == rid).validate_and_update(**attrs)
         if r.errors:
             response.status = 422
             return self.error_422(r.errors)
@@ -477,7 +549,16 @@ class RESTModule(AppModule):
         return self.serialize_one(row)
 
     async def _delete(self, dbset, rid):
-        r = dbset.where(self.model.id == rid).delete()
+        r = dbset.where(self.model.table._id == rid).select().first()
+        if not r or not r.destroy():
+            response.status = 404
+            return self.error_404()
+        for callback in self._after_delete_callbacks:
+            callback(r)
+        return {}
+
+    async def _delete_without_destroy(self, dbset, rid):
+        r = dbset.where(self.model.table._id == rid).delete()
         if not r:
             response.status = 404
             return self.error_404()
@@ -487,7 +568,7 @@ class RESTModule(AppModule):
 
     #: additional routes
     async def _group(self, dbset, field):
-        count_field = self.model.id.count()
+        count_field = self.model.table._id.count()
         sort = self.get_sort(
             default='count',
             allowed_fields={'count': count_field}
