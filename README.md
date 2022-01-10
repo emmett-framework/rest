@@ -55,7 +55,7 @@ app.use_extension(REST)
 
 ## Usage
 
-The Emmett-REST extension is intended to be used with Emmett models, and it uses application modules to build APIs over them. 
+The Emmett-REST extension is intended to be used with Emmett [models](https://emmett.sh/docs/latest/orm/models), and it uses application modules to build APIs over them. 
 
 Let's say, for example, that you have a task manager app with a `Task` model:
 
@@ -161,16 +161,16 @@ The `rest_module` method accepts several parameters (*bold ones are required*) f
 | parser | `None` | a class to be used for parsing |
 | enabled\_methods | `str` list: index, create, read, update, delete | the routes that should be enabled on the module |
 | disabled\_methods | `[]` | the routes that should be disabled on the module |
-| use\_save | `True` | |
-| use\_destroy | `True` | |
+| use\_save | `True` | whether to use the `save` method in records to perform operations or the low-level ORM APIs |
+| use\_destroy | `True` | whether to use the `destroy` method in records to perform operations or the low-level ORM APIs |
 | list\_envelope | data | the envelope to use on the index route |
 | single\_envelope | `False` | the envelope to use on all the routes except for lists endpoints |
 | meta\_envelope | meta | the envelope to use for meta data |
 | groups\_envelope | data | the envelope to use for the grouping endpoint |
 | use\_envelope\_on\_parse | `False` | if set to `True` will use the envelope specified in *single_envelope* option also on parsing |
 | serialize\_meta | `True` | whether to serialize meta data on lists endpoint |
-| base\_path | `None` | |
-| id\_path | `None` | |
+| base\_path | `/` | the default path prefix for routes not involving a single record |
+| id\_path | `/<int:rid>` | the default path prefix for routes involving a single record |
 | url\_prefix | `None` | as for standard modules |
 | hostname | `None` | as for standard modules |
 | module\_class | `RestModule` | the module class to use |
@@ -273,6 +273,10 @@ async def task_new():
 
 The *create* method won't need any parameters, and is responsible of creating new records in the database.
 
+> **Note:** since Emmett 2.4, a `save` method is available on records. Emmett-REST acts accordingly to the `use_save` configuration parameter (in extension configuration or module initialization), using `Model.create` when saving is disabled.
+
+The *update* and *delete* methods are quite similar:
+
 ```python
 @tasks.update()
 async def task_edit(dbset, rid):
@@ -298,7 +302,9 @@ async def task_del(dbset, rid):
     return {}
 ```
 
-The *update* and *delete* methods are quite similar, since they should accept the `dbset` parameter and the `rid` one, which will be the record id requested by the client.
+since, as you can see, they should accept the `dbset` parameter and the `rid` one, which will be the record id requested by the client.
+
+> **Note:** since Emmett 2.4, `save` and `destroy` method are available on records. Emmett-REST acts accordingly to the `use_save` and `use_destroy` configuration parameter (in extension configuration or module initialization), using `dbset.update` and `dbset.delete` when saving and/or destroying is disabled.
 
 All the decorators accept an additional `pipeline` parameter that you can use to add custom pipes to the routed function:
 
@@ -566,11 +572,11 @@ Unless overridden, the default `create`, `update` and `delete` methods invoke ca
 | callback | arguments| description |
 | --- | --- | --- |
 | before\_create | `[sdict]` | called before the record insertion |
-| before\_update | `[int, sdict]` | called before the record gets update |
+| before\_update | `[id\|Row, sdict]` | called before the record gets update (when saving is disabled, the first argument is the id of the record, otherwise the record to be updated) |
 | after\_parse\_params | `[sdict]` | called after params are loaded from the request body |
 | after\_create | `[Row]` | called after the record insertion |
 | after\_update | `[Row]` | called after the record gets updated |
-| after\_delete | `[int]` | called after the record gets deleted |
+| after\_delete | `[id\|Row]` | called after the record gets deleted (when destroying is disabled, the argument is the id of the record, otherwise the destroyed record) |
 
 For example, you might need to notify some changes:
 
