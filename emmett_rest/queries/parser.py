@@ -28,7 +28,7 @@ _query_operators = {
     '$or': operator.or_,
     '$not': lambda field, value: operator.inv(value),
     '$eq': operator.eq,
-    '$neq': operator.ne,
+    '$ne': operator.ne,
     '$lt': operator.lt,
     '$gt': operator.gt,
     '$le': operator.le,
@@ -38,6 +38,12 @@ _query_operators = {
     '$in': lambda field, value: operator.methodcaller('belongs', value)(field),
     '$exists': lambda field, value: (
         operator.ne(field, None) if value else operator.eq(field, None)
+    ),
+    '$like': lambda field, value: (
+        operator.methodcaller('like', value, case_sensitive=True)(field)
+    ),
+    '$ilike': lambda field, value: (
+        operator.methodcaller('like', value)(field)
     ),
     '$regex': lambda field, value: (
         operator.methodcaller('contains', value, case_sensitive=True)(field)

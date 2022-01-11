@@ -609,6 +609,8 @@ The query language is inspired to the MongoDB query language, and provides the f
 | $le | `Union[int, float, str]` | matches values less than or equal to specified value |
 | $ge | `Union[int, float, str]` | matches values greater than or equal to specified value |
 | $exists | `bool` | matches not null or null values |
+| $like | `str` | matches specified like expression |
+| $ilike | `str` | case insensitive $like |
 | $regex | `str` | matches specified regex expression |
 | $iregex | `str` | case insensitive $regex |
 | $geo.contains | `GeoDict` | GIS `ST_Contains` |

@@ -81,6 +81,8 @@ op_validators = {
     '$lte': op_validation_generator(int, float, datetime),
     '$gte': op_validation_generator(int, float, datetime),
     '$exists': op_validation_generator(bool),
+    '$like': validate_default,
+    '$ilike': validate_default,
     '$regex': validate_default,
     '$iregex': validate_default,
     '$geo.contains': validate_geo,

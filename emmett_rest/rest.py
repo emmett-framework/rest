@@ -402,11 +402,12 @@ class RESTModule(AppModule):
         return page, page_size
 
     def get_sort(self, default=None, allowed_fields=None):
+        default = default or self.default_sort
         pfields = (
             (
                 isinstance(request.query_params.sort_by, str) and
                 request.query_params.sort_by
-            ) or default or self.default_sort
+            ) or default
         ).split(',')
         rv = []
         allowed_fields = allowed_fields or self._sortable_dict
@@ -422,7 +423,7 @@ class RESTModule(AppModule):
         return reduce(
             lambda a, b: operator.or_(a, b) if a and b else None,
             rv
-        )
+        ) if rv else allowed_fields.get(default)
 
     def build_error_400(self, errors=None):
         if errors:
