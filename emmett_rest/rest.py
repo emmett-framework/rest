@@ -55,6 +55,7 @@ class RESTModule(AppModule):
         parser: Optional[ParserType] = None,
         enabled_methods: Optional[List] = None,
         disabled_methods: Optional[List] = None,
+        default_sort: Optional[str] = None,
         use_save: Optional[bool] = None,
         use_destroy: Optional[bool] = None,
         list_envelope: Optional[str] = None,
@@ -78,6 +79,7 @@ class RESTModule(AppModule):
             parser=parser,
             enabled_methods=enabled_methods,
             disabled_methods=disabled_methods,
+            default_sort=default_sort,
             use_save=use_save,
             use_destroy=use_destroy,
             list_envelope=list_envelope,
@@ -105,6 +107,7 @@ class RESTModule(AppModule):
         parser: Optional[ParserType] = None,
         enabled_methods: Optional[List] = None,
         disabled_methods: Optional[List] = None,
+        default_sort: Optional[str] = None,
         use_save: Optional[bool] = None,
         use_destroy: Optional[bool] = None,
         list_envelope: Optional[str] = None,
@@ -138,6 +141,7 @@ class RESTModule(AppModule):
             parser=parser,
             enabled_methods=enabled_methods,
             disabled_methods=disabled_methods,
+            default_sort=default_sort,
             use_save=use_save,
             use_destroy=use_destroy,
             list_envelope=list_envelope,
@@ -164,6 +168,7 @@ class RESTModule(AppModule):
         parser: Optional[ParserType] = None,
         enabled_methods: Optional[List] = None,
         disabled_methods: Optional[List] = None,
+        default_sort: Optional[str] = None,
         use_save: Optional[bool] = None,
         use_destroy: Optional[bool] = None,
         list_envelope: Optional[str] = None,
@@ -224,7 +229,11 @@ class RESTModule(AppModule):
         ):
             self._pagination[key] = self.ext.config[key]
         self._sort_param = self.ext.config.sort_param
-        self.default_sort = self.ext.config.default_sort
+        self.default_sort = (
+            default_sort or
+            self.ext.config.default_sort or
+            model.table._id.name
+        )
         self._path_base = base_path or self.ext.config.base_path
         self._path_rid = id_path or self.ext.config.id_path
         self._serializer_class = serializer or \

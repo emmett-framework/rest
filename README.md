@@ -161,6 +161,7 @@ The `rest_module` method accepts several parameters (*bold ones are required*) f
 | parser | `None` | a class to be used for parsing |
 | enabled\_methods | `str` list: index, create, read, update, delete | the routes that should be enabled on the module |
 | disabled\_methods | `[]` | the routes that should be disabled on the module |
+| default\_sort | `None` | the field used for sorting records by default (use model primary key unless specified) |
 | use\_save | `True` | whether to use the `save` method in records to perform operations or the low-level ORM APIs |
 | use\_destroy | `True` | whether to use the `destroy` method in records to perform operations or the low-level ORM APIs |
 | list\_envelope | data | the envelope to use on the index route |
@@ -646,7 +647,7 @@ app.config.REST.query_param = 'where'
 app.config.REST.min_pagesize = 10
 app.config.REST.max_pagesize = 25
 app.config.REST.default_pagesize = 20
-app.config.REST.default_sort = 'id'
+app.config.REST.default_sort = None
 app.config.REST.base_path = '/'
 app.config.REST.id_path = '/<int:rid>'
 app.config.REST.list_envelope = 'data'

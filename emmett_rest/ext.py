@@ -34,7 +34,7 @@ class REST(Extension):
         min_pagesize=1,
         max_pagesize=50,
         default_pagesize=20,
-        default_sort='id',
+        default_sort=None,
         base_path='/',
         id_path='/<int:rid>',
         list_envelope='data',
