@@ -22,7 +22,8 @@ from emmett.orm.objects import Row, Set as DBSet
 from emmett.pipeline import Pipe
 from emmett.tools.service import JSONServicePipe
 
-from .helpers import RecordFetcher, SetFetcher, FieldPipe, FieldsPipe
+from .openapi.api import ModuleOpenAPI
+from .helpers import RecordFetcher, SetFetcher, FieldPipe, FieldsPipe, RESTRoutingCtx
 from .parsers import (
     parse_params as _parse_params,
     parse_params_with_parser as _parse_params_wparser
@@ -293,6 +294,25 @@ class RESTModule(AppModule):
         self._group_field_pipe = FieldPipe(self, '_groupable_fields')
         self._stats_field_pipe = FieldsPipe(self, '_statsable_fields')
         self.allowed_sorts = [self.default_sort]
+        self._openapi_specs = {
+            'serializers': {
+                key: self.serializer for key in [
+                    'index',
+                    'create',
+                    'read',
+                    'update',
+                    'delete'
+                ]
+            },
+            'parsers': {
+                key: self.parser for key in [
+                    'create',
+                    'update'
+                ]
+            },
+            'additional_routes': []
+        }
+        self.openapi = ModuleOpenAPI(self)
         self._init_pipelines()
         #: custom init
         self.init()
@@ -343,6 +363,15 @@ class RESTModule(AppModule):
             self.enabled_methods.remove(method_name)
         #: route enabled methods
         self._expose_routes()
+
+    def route(
+        self,
+        paths: Optional[Union[str, List[str]]] = None,
+        name: Optional[str] = None,
+        **kwargs
+    ) -> RESTRoutingCtx:
+        rv = super().route(paths, name, **kwargs)
+        return RESTRoutingCtx(self, rv)
 
     def _expose_routes(self):
         path_base_trail = (

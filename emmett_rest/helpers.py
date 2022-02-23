@@ -9,8 +9,32 @@
     :license: BSD-3-Clause
 """
 
+from __future__ import annotations
+from typing import TYPE_CHECKING, TypeVar
+
 from emmett import request, response
 from emmett.pipeline import Pipe
+from emmett.routing.router import RoutingCtx
+
+if TYPE_CHECKING:
+    from .rest import RESTModule
+
+T = TypeVar("T")
+
+
+class RESTRoutingCtx:
+    def __init__(self, module: RESTModule, ctx: RoutingCtx):
+        self._rest_module = module
+        self._wrapped_ctx = ctx
+
+    def __call__(self, f: T) -> T:
+        openapi_include = getattr(f, "_openapi_spec", False)
+        rv = self._wrapped_ctx(f)
+        if openapi_include:
+            self._rest_module._openapi_specs["additional_routes"].append(
+                (self._wrapped_ctx.rule.name, f, self._wrapped_ctx.rule)
+            )
+        return rv
 
 
 class ModulePipe(Pipe):
