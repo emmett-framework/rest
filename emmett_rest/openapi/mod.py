@@ -104,7 +104,9 @@ class OpenAPIModule(AppModule):
     @cachedprop
     def _default_description(self):
         return self.app.templater._render(
-            read_text("emmett_rest.openapi.assets", "description.md"), context={
+            read_text("emmett_rest.openapi.assets", "description.md"),
+            file_path="__emmett_rest__/openapi/description.md",
+            context={
                 "title": self.title,
             }
         )
@@ -112,7 +114,9 @@ class OpenAPIModule(AppModule):
     async def _ui_stoplight(self):
         response.content_type = "text/html; charset=utf-8"
         return self.app.templater._render(
-            self._stoplight_template, context={
+            self._stoplight_template,
+            file_path="__emmett_rest__/openapi/stoplight.html",
+            context={
                 "title": self.title,
                 "openapi_url": url(f"{self.name}.schema_yaml")
             }
