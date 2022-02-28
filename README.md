@@ -50,7 +50,7 @@ And add it to your Emmett application:
 ```python
 from emmett_rest import REST
 
-app.use_extension(REST)
+rest = app.use_extension(REST)
 ```
 
 ## Usage
@@ -631,6 +631,42 @@ The JSON condition always have fields' names as keys (except for `$and`, `$or`, 
     "priority": {"$gte": 5}
 }
 ```
+
+### OpenAPI schemas
+
+Emmett-REST provides utilities to automatically generate OpenAPI schemas and relevant UI.
+
+In order to produce JSON and YAML schemas, you can instantiate a `docs` module:
+
+```python
+docs = rest.docs_module(
+    __name__,
+    "api_docs",
+    title="My APIs",
+    version="1",
+    modules_tree_prefix="api.v1"
+)
+```
+
+As you can see, the `docs_module` methods requires a `modules_tree_prefix` parameter which instructs REST extensions which modules should be included in the schema.
+
+> **Note:** ensure to define your REST modules before instantiating the OpenAPI one, as the latter will need modules to be pre-defined in order to make the inspection.
+
+The `docs_module` method accepts several parameters (*bold ones are required*) for its configuration:
+
+| parameter | default | description |
+| --- | --- | --- |
+| **import_name** | | as for standard modules |
+| **name** | | as for standard modules |
+| **title** | | the title for the OpenAPI schema |
+| **version** | | version for the OpenAPI schema |
+| **modules\_tree\_prefix** | | a prefix for modules names to be included in the schema |
+| description | `None` | general description for the schema |
+| produce\_schemas | `False` | wheter to generate OpenAPI *schema* resources from modules serializers in addition to endpoints |
+| expose\_ui | `None` | wheter to expose UI (under default behaviour will match the application debug flag) |
+| ui\_path | `/docs` | path for the UI component |
+| url\_prefix | `None` | as for standard modules |
+| hostname | `None` | as for standard modules |
 
 ### Customizing REST modules
 
