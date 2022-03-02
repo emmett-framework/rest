@@ -9,10 +9,10 @@
     :license: BSD-3-Clause
 """
 
-from emmett import Pipe, response
-from yaml import add_representer, dump
+from enum import Enum
 
-from .schemas import ParameterInType
+from emmett import Pipe, response
+from yaml import add_multi_representer, dump
 
 
 class YAMLPipe(Pipe):
@@ -23,4 +23,4 @@ class YAMLPipe(Pipe):
         return dump(await next_pipe(**kwargs), sort_keys=False)
 
 
-add_representer(ParameterInType, lambda d, v: d.represent_str(v.value))
+add_multi_representer(Enum, lambda d, v: d.represent_data(v.value))
