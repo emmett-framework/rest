@@ -43,13 +43,13 @@ _query_operators = {
         operator.methodcaller('like', value, case_sensitive=True)(field)
     ),
     '$ilike': lambda field, value: (
-        operator.methodcaller('like', value)(field)
+        operator.methodcaller('like', value, case_sensitive=False)(field)
     ),
     '$regex': lambda field, value: (
         operator.methodcaller('contains', value, case_sensitive=True)(field)
     ),
     '$iregex': lambda field, value: (
-        operator.methodcaller('contains', value)(field)
+        operator.methodcaller('contains', value, case_sensitive=False)(field)
     ),
     '$geo.contains': lambda field, value: (
         operator.methodcaller('st_contains', value)(field)
