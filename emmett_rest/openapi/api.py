@@ -86,14 +86,24 @@ class OpenAPIDefine:
         self,
         status_code: int = 200,
         content: Optional[str] = None,
-        fields: Dict[str, Union[Type, Tuple[Type, Any]]] = {},
+        fields: Dict[str, Union[Type, Tuple[Type, Any]]] = {}
     ) -> Callable[[T], T]:
         def deco(f: T) -> T:
-            f._openapi_def_response = {
-                "code": status_code,
-                "content": content or "application/json",
-                "fields": fields,
+            f._openapi_def_responses = {
+                **getattr(f, "_openapi_def_responses", {}),
+                **{
+                    str(status_code): {
+                        "content": content or "application/json",
+                        "fields": fields
+                    }
+                }
             }
+            return f
+        return deco
+
+    def response_default_errors(self, *error_codes: int) -> Callable[[T], T]:
+        def deco(f: T) -> T:
+            f._openapi_def_response_codes = [str(err) for err in error_codes]
             return f
         return deco
 
@@ -111,9 +121,26 @@ class OpenAPIDefine:
 
 
 class OpenAPIDescribe:
-    def __call__(self, description: str) -> Callable[[T], T]:
+    def __call__(
+        self,
+        summary: str,
+        description: str = ""
+    ) -> Callable[[T], T]:
         def deco(f: T) -> T:
-            f._openapi_desc = description
+            f._openapi_desc_summary = summary
+            f._openapi_desc_description = description
+            return f
+        return deco
+
+    def summary(self, description: str) -> Callable[[T], T]:
+        def deco(f: T) -> T:
+            f._openapi_desc_summary = description
+            return f
+        return deco
+
+    def description(self, description: str) -> Callable[[T], T]:
+        def deco(f: T) -> T:
+            f._openapi_desc_description = description
             return f
         return deco
 

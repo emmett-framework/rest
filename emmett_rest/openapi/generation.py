@@ -104,6 +104,39 @@ class StatModel(BaseModel):
     avg: Union[int, float]
 
 
+_error_schema = model_process_schema(
+    ErrorsModel,
+    model_name_map={},
+    ref_prefix=None
+)[0]
+_def_errors = {
+    "400": {
+        "description": "Bad request",
+        "content": {
+            "application/json": {
+                "schema": _error_schema
+            }
+        }
+    },
+    "404": {
+        "description": "Resource not found",
+        "content": {
+            "application/json": {
+                "schema": _error_schema
+            }
+        }
+    },
+    "422": {
+        "description": "Unprocessable request",
+        "content": {
+            "application/json": {
+                "schema": _error_schema
+            }
+        }
+    }
+}
+
+
 def _defs_from_item(obj: Any, key: str):
     rv = defaultdict(list)
     try:
@@ -548,38 +581,12 @@ class OpenAPIGenerator:
         path_kind: str
     ) -> Dict[str, Any]:
         rv = {}
-        error_schema = model_process_schema(
-            ErrorsModel,
-            model_name_map={},
-            ref_prefix=None
-        )[0]
         if path_kind in ["read", "update", "delete"]:
-            rv["404"] = {
-                "description": "Resource not found",
-                "content": {
-                    "application/json": {
-                        "schema": error_schema
-                    }
-                }
-            }
+            rv["404"] = _def_errors["404"]
         if path_kind in ["create", "update"]:
-            rv["422"] = {
-                "description": "Unprocessable request",
-                "content": {
-                    "application/json": {
-                        "schema": error_schema
-                    }
-                }
-            }
+            rv["422"] = _def_errors["422"]
         if path_kind in ["index", "sample", "group", "stats"]:
-            rv["400"] = {
-                "description": "Bad request",
-                "content": {
-                    "application/json": {
-                        "schema": error_schema
-                    }
-                }
-            }
+            rv["400"] = _def_errors["400"]
         return rv
 
     def build_index_schema(
@@ -775,8 +782,13 @@ class OpenAPIGenerator:
                     operation = {
                         "summary": getattr(
                             path_target,
-                            "_openapi_desc",
+                            "_openapi_desc_summary",
                             f"{{name}} {path_name.rsplit('.', 1)[-1]}"
+                        ).format(name=mod_name),
+                        "description": getattr(
+                            path_target,
+                            "_openapi_desc_description",
+                            ""
                         ).format(name=mod_name),
                         "operationId": f"{path_name}.{method}".replace(".", "_"),
                         "tags": [modules_tags[module.name]]
@@ -825,21 +837,22 @@ class OpenAPIGenerator:
                         }
 
                     operation_responses = {}
-                    operation_response = getattr(
-                        path_target, "_openapi_def_response", None
+                    defined_responses = getattr(
+                        path_target, "_openapi_def_responses", None
                     )
-                    if operation_response:
-                        schema = build_schema_from_fields(
-                            module,
-                            operation_response["fields"]
-                        )[0]
-                        operation_responses[operation_response["code"]] = {
-                            "content": {
-                                operation_response["content"]: {
-                                    "schema": schema
+                    if defined_responses:
+                        for status_code, defined_response in defined_responses.items():
+                            schema = build_schema_from_fields(
+                                module,
+                                defined_response["fields"]
+                            )[0]
+                            operation_responses[status_code] = {
+                                "content": {
+                                    defined_response["content"]: {
+                                        "schema": schema
+                                    }
                                 }
                             }
-                        }
                     else:
                         serializer = getattr(
                             path_target, "_openapi_def_serializer", module.serializer
@@ -857,6 +870,11 @@ class OpenAPIGenerator:
                                 }
                             }
                         }
+                    defined_resp_errors = getattr(
+                        path_target, "_openapi_def_response_codes", []
+                    )
+                    for status_code in defined_resp_errors:
+                        operation_responses[status_code] = _def_errors[status_code]
 
                     if operation_responses:
                         operation["responses"] = operation_responses
