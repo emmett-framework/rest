@@ -674,6 +674,61 @@ The `docs_module` method accepts several parameters (*bold ones are required*) f
 | url\_prefix | `None` | as for standard modules |
 | hostname | `None` | as for standard modules |
 
+Under default behaviour, Emmett-REST will generate OpenAPI schema considering your modules endpoints, inferring types from your models, serializers and parsers.
+
+#### Customising endpoints grouping
+
+Under default behaviour, endpoints in generated OpenAPI schema are grouped by module. In case you need to change this, you can use the docs module `regroup` method:
+
+```python
+docs.regroup("api.v1.some_module", "api.v1.another_module")
+```
+
+#### OpenAPI modules' methods
+
+Emmett-REST provides an `openapi` object in your REST modules to enable schema customisations. Specifically, this allows you to customise the serializers and parsers specs for your module methods:
+
+- `RESTModule.openapi.define.serializer(Serializer, methods)` lets you specify different serialization specs for the given methods
+- `RESTModule.openapi.define.parser(Parser, methods)` lets you specify different deserialization specs for the given methods
+
+#### OpenAPI decorators
+
+Emmett-REST provides an `openapi` decorator to allow definition of additional routes and customisation of OpenAPI schema. Let's see them in detail.
+
+##### include
+
+Used to include a custom route in the resulting OpenAPI schema:
+
+```
+from emmett_rest.openapi import openapi
+
+@mymodule.route()
+@openapi.include
+async def custom_method():
+    ...
+```
+
+##### define
+
+Used to specify schemes and attributes in different contexts. The `define` group provides several decorators with specific use-cases:
+
+- `openapi.define.fields` let you specify the type and default values on serializers and parsers for conditions where such data cannot be directly inferred
+- `openapi.define.request` let you specify request specs on custom endpoints
+- `openapi.define.response` let you specify response specs on custom endpoints
+- `openapi.define.response_default_errors` let you re-use standard response errors on custom endpoints
+- `openapi.define.serializer` let you re-use a `Serializer` spec on custom endpoints
+- `openapi.define.parser` let you re-use a `Parser` spec on custom endpoints
+
+##### describe
+
+Used to describe OpenAPI schemes in different contexts. The `describe` group provides several decorators with specific use-cases:
+
+- `openapi.describe` let you specify a summary and description on custom endpoints
+- `openapi.describe.summary` let you specify a summary for custom endpoints
+- `openapi.describe.description` let you specify a description for custom endpoints
+- `openapi.describe.request` let you specify descriptions for request schemes
+- `openapi.describe.response` let you specify descriptions for response schemes
+
 ### Customizing REST modules
 
 #### Extension options
