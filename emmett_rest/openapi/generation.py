@@ -66,11 +66,14 @@ _def_summaries = {
     "read": "Retrieve {entity}",
     "create": "Create {entity}",
     "update": "Update {entity}",
-    "delete": "Delete {entity}"
+    "delete": "Delete {entity}",
+    "sample": "List random {entity}",
+    "group": "Group {entity}",
+    "stats": "Retrieve {entity} stats"
 }
 
 
-class IndexMetaModel(BaseModel):
+class MetaModel(BaseModel):
     object: str = "list"
     has_more: bool = False
     total_objects: int = 0
@@ -78,6 +81,17 @@ class IndexMetaModel(BaseModel):
 
 class ErrorsModel(BaseModel):
     errors: Dict[str, Any] = Field(default_factory=dict)
+
+
+class GroupModel(BaseModel):
+    value: Any
+    count: int
+
+
+class StatModel(BaseModel):
+    min: Union[int, float]
+    max: Union[int, float]
+    avg: Union[int, float]
 
 
 def _defs_from_item(obj: Any, key: str):
@@ -119,7 +133,10 @@ def _denormalize_schema(schema: Dict[str, Any], defs: Dict[str, Dict[str, Any]])
                 schema["anyOf"][idx] = defs[element["$ref"][14:]]
 
 
-def _index_default_query_parameters(module: RESTModule) -> List[Dict[str, Any]]:
+def _index_default_query_parameters(
+    module: RESTModule,
+    sort_enabled: bool = True
+) -> List[Dict[str, Any]]:
     rv = []
 
     model_map = {}
@@ -151,18 +168,78 @@ def _index_default_query_parameters(module: RESTModule) -> List[Dict[str, Any]]:
                 ge=module.ext.config.min_pagesize,
                 le=module.ext.config.max_pagesize
             )
-        ),
+        )
+    ]
+
+    if sort_enabled:
+        fields.append(
+            ModelField(
+                name=module.ext.config.sort_param,
+                type_=List[str],
+                class_validators=None,
+                model_config=_pydantic_baseconf,
+                required=False,
+                default=module.default_sort,
+                field_info=FieldInfo(
+                    description=(
+                        "Sort results using the specified attribute(s). "
+                        "Descendant sorting applied with -{parameter} notation. "
+                        "Multiple values should be separated by comma."
+                    )
+                )
+            )
+        )
+
+    if condition_fields:
+        where_model = create_model('Condition', **condition_fields)
+        fields.append(
+            ModelField(
+                name=module.ext.config.query_param,
+                type_=where_model,
+                class_validators=None,
+                model_config=_pydantic_baseconf,
+                required=False,
+                field_info=FieldInfo(
+                    description=(
+                        "Filter results using the provided query object."
+                    )
+                )
+            )
+        )
+        model_map[where_model] = 'Condition'
+
+    for field in fields:
+        schema, defs, _ = field_schema(
+            field, model_name_map=model_map, ref_prefix=None
+        )
+        if field.name in enums:
+            schema["items"]["enum"] = enums[field.name]
+        elif field.name == module.ext.config.query_param:
+            schema["allOf"][0] = defs["Condition"]
+        rv.append({
+            "name": field.name,
+            "in": "query",
+            "required": field.required,
+            "schema": schema
+        })
+    return rv
+
+
+def _stats_default_query_parameters(module: RESTModule) -> List[Dict[str, Any]]:
+    rv = []
+    model_map = {}
+    condition_fields = {key: (Any, None) for key in module.query_allowed_fields}
+
+    fields = [
         ModelField(
-            name=module.ext.config.sort_param,
+            name='fields',
             type_=List[str],
             class_validators=None,
             model_config=_pydantic_baseconf,
-            required=False,
-            default=module.default_sort,
+            required=True,
             field_info=FieldInfo(
                 description=(
-                    "Sort results using the specified attribute(s). "
-                    "Descendant sorting applied with -{parameter} notation. "
+                    "Add specified attribute(s) to stats. "
                     "Multiple values should be separated by comma."
                 )
             )
@@ -191,9 +268,9 @@ def _index_default_query_parameters(module: RESTModule) -> List[Dict[str, Any]]:
         schema, defs, _ = field_schema(
             field, model_name_map=model_map, ref_prefix=None
         )
-        if field.name in enums:
-            schema["items"]["enum"] = enums[field.name]
-        elif field.name == module.ext.config.query_param:
+        if field.name == "fields":
+            schema["items"]["enum"] = module.stats_allowed_fields
+        if field.name == module.ext.config.query_param:
             schema["allOf"][0] = defs["Condition"]
         rv.append({
             "name": field.name,
@@ -258,7 +335,7 @@ class OpenAPIGenerator:
         servers: Optional[List[Dict[str, Union[str, Any]]]] = None,
         terms_of_service: Optional[str] = None,
         contact: Optional[Dict[str, Union[str, Any]]] = None,
-        license_info: Optional[Dict[str, Union[str, Any]]] = None,
+        license_info: Optional[Dict[str, Union[str, Any]]] = None
     ):
         self.openapi_version = openapi_version
         self.info: Dict[str, Any] = {"title": title, "version": version}
@@ -301,7 +378,6 @@ class OpenAPIGenerator:
             )
         return rv
 
-
     def build_schema_from_parser(
         self,
         module: RESTModule,
@@ -324,7 +400,6 @@ class OpenAPIGenerator:
             fields[key] = (type_hint, type_default)
             hints_check.add(key)
         return build_schema_from_fields(module, fields, hints_check)
-
 
     def build_schema_from_serializer(
         self,
@@ -356,7 +431,6 @@ class OpenAPIGenerator:
             fields[key] = (type_hint, type_default)
             hints_check.add(key)
         return build_schema_from_fields(module, fields, hints_check)
-
 
     def build_definitions(self, module: RESTModule) -> Dict[str, Any]:
         serializers, parsers = {}, {}
@@ -404,7 +478,6 @@ class OpenAPIGenerator:
             "schema": serializers[module.serializer]["schema"]
         }
 
-
     def build_operation_metadata(
         self,
         module: RESTModule,
@@ -448,12 +521,17 @@ class OpenAPIGenerator:
             })
         if path_kind == "index":
             rv.extend(_index_default_query_parameters(module))
+        elif path_kind == "sample":
+            rv.extend(_index_default_query_parameters(module, sort_enabled=False))
+        elif path_kind == "group":
+            rv[-1]["description"] = "Group results using the provided attribute"
+            rv[-1]["schema"]["enum"] = module.grouping_allowed_fields
+        elif path_kind == "stats":
+            rv.extend(_stats_default_query_parameters(module))
         return rv
-
 
     def build_operation_common_responses(
         self,
-        module: RESTModule,
         path_kind: str
     ) -> Dict[str, Any]:
         rv = {}
@@ -480,24 +558,28 @@ class OpenAPIGenerator:
                     }
                 }
             }
+        if path_kind in ["index", "sample", "group", "stats"]:
+            rv["400"] = {
+                "description": "Bad request",
+                "content": {
+                    "application/json": {
+                        "schema": error_schema
+                    }
+                }
+            }
         return rv
-
 
     def build_index_schema(
         self,
         module: RESTModule,
-        item_model: BaseModel,
         item_schema: Dict[str, Any]
     ) -> Dict[str, Any]:
         fields = {module.list_envelope: (List[Dict[str, Any]], ...)}
         if module.serialize_meta:
-            fields[module.meta_envelope] = (IndexMetaModel, ...)
+            fields[module.meta_envelope] = (MetaModel, ...)
         schema, defs, nested = model_process_schema(
             create_model(f"{module.__class__.__name__}Index", **fields),
-            model_name_map={
-                IndexMetaModel: "Meta",
-                item_model: item_model.__name__
-            },
+            model_name_map={MetaModel: "Meta"},
             ref_prefix=None
         )
         schema["properties"][module.list_envelope]["items"] = item_schema
@@ -505,6 +587,36 @@ class OpenAPIGenerator:
             schema["properties"][module.meta_envelope] = defs["Meta"]
             schema["properties"][module.meta_envelope]["title"] = "Meta"
         return schema
+
+    def build_group_schema(self, module: RESTModule) -> Dict[str, Any]:
+        fields = {module.groups_envelope: (List[Dict[str, Any]], ...)}
+        if module.serialize_meta:
+            fields[module.meta_envelope] = (MetaModel, ...)
+        schema, defs, nested = model_process_schema(
+            create_model(f"{module.__class__.__name__}Group", **fields),
+            model_name_map={MetaModel: "Meta"},
+            ref_prefix=None
+        )
+        schema["properties"][module.groups_envelope]["items"] = model_process_schema(
+            GroupModel,
+            model_name_map={},
+            ref_prefix=None
+        )[0]
+        schema["properties"][module.groups_envelope]["items"]["title"] = "Group"
+        if module.serialize_meta:
+            schema["properties"][module.meta_envelope] = defs["Meta"]
+            schema["properties"][module.meta_envelope]["title"] = "Meta"
+        return schema
+
+    def build_stats_schema(self, module: RESTModule) -> Dict[str, Any]:
+        fields = {"stats": (Dict[str, StatModel], ...)}
+        schema, defs, nested = model_process_schema(
+            create_model(f"{module.__class__.__name__}Stat", **fields),
+            model_name_map={StatModel: "Stat"},
+            ref_prefix=None
+        )
+        schema["properties"]["stats"]["additionalProperties"] = defs["Stat"]
+        return schema["properties"]["stats"]
 
     def build_paths(
         self,
@@ -521,7 +633,10 @@ class OpenAPIGenerator:
             "create",
             "read",
             "update",
-            "delete"
+            "delete",
+            "sample",
+            "group",
+            "stats"
         }:
             path_relative, methods = module._methods_map[path_kind]
             if not isinstance(methods, list):
@@ -538,7 +653,7 @@ class OpenAPIGenerator:
 
             rv[path_scoped] = rv.get(path_scoped) or {}
 
-            serializer_obj = module._openapi_specs["serializers"][path_kind]
+            serializer_obj = module._openapi_specs["serializers"].get(path_kind)
             parser_obj = module._openapi_specs["parsers"].get(path_kind, module.parser)
 
             for method in methods:
@@ -548,9 +663,7 @@ class OpenAPIGenerator:
                 operation_parameters = self.build_operation_parameters(
                     module, path_kind, path_params
                 )
-                operation_responses = self.build_operation_common_responses(
-                    module, path_kind
-                )
+                operation_responses = self.build_operation_common_responses(path_kind)
                 if operation_parameters:
                     operation["parameters"] = operation_parameters
                 if path_kind in ["create", "update"]:
@@ -577,14 +690,16 @@ class OpenAPIGenerator:
                             }
                         }
                     }
-                elif path_kind == "index":
+                elif path_kind in ["index", "sample"]:
                     operation_responses["200"] = {
-                        "description": "Resource list",
+                        "description": (
+                            "Resource list" if path_kind == "index" else
+                            "Resource random list"
+                        ),
                         "content": {
                             "application/json": {
                                 "schema": self.build_index_schema(
                                     module,
-                                    serializers[serializer_obj]["model"],
                                     serializers[serializer_obj]["schema"]
                                 )
                             }
@@ -599,6 +714,24 @@ class OpenAPIGenerator:
                                     "type": "object",
                                     "properties": {}
                                 }
+                            }
+                        }
+                    }
+                elif path_kind == "group":
+                    operation_responses["200"] = {
+                        "description": "Resource groups",
+                        "content": {
+                            "application/json": {
+                                "schema": self.build_group_schema(module)
+                            }
+                        }
+                    }
+                elif path_kind == "stats":
+                    operation_responses["200"] = {
+                        "description": "Resource stats",
+                        "content": {
+                            "application/json": {
+                                "schema": self.build_stats_schema(module)
                             }
                         }
                     }

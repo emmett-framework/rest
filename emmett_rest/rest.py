@@ -301,7 +301,8 @@ class RESTModule(AppModule):
                     'create',
                     'read',
                     'update',
-                    'delete'
+                    'delete',
+                    'sample'
                 ]
             },
             'parsers': {
