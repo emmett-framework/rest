@@ -71,6 +71,16 @@ _def_summaries = {
     "group": "Group {entity}",
     "stats": "Retrieve {entity} stats"
 }
+_def_descriptions = {
+    "index": "Returns a list of {entity}",
+    "read": "Retrieves specific {entity} with the given identifier",
+    "create": "Creates new {entity} with the given specs",
+    "update": "Updates specific {entity} with the given identifier and specs",
+    "delete": "Delete specific {entity} with the given identifier",
+    "sample": "Returns random selection of {entity}",
+    "group": "Counts {entity} grouped by the given attribute",
+    "stats": "Returns {entity} stats for the specified attributes"
+}
 
 
 class MetaModel(BaseModel):
@@ -488,6 +498,9 @@ class OpenAPIGenerator:
         # TODO: description, deprecated
         return {
             "summary": _def_summaries[route_kind].format(
+                entity=module.name.rsplit(".", 1)[-1]
+            ),
+            "description": _def_descriptions[route_kind].format(
                 entity=module.name.rsplit(".", 1)[-1]
             ),
             "operationId": f"{module.name}.{route_kind}.{method}".replace(".", "_"),
