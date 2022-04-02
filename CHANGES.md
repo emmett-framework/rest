@@ -1,6 +1,15 @@
 Emmett-REST changelog
 =====================
 
+Version 1.4
+-----------
+
+*Released on April 2nd 2022*
+
+- Add OpenAPI schema generation
+- Add OpenAPI JSON and YAML schema endpoints
+- Add OpenAPI UI endpoint
+
 Version 1.3
 -----------
 
