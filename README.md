@@ -50,7 +50,7 @@ And add it to your Emmett application:
 ```python
 from emmett_rest import REST
 
-app.use_extension(REST)
+rest = app.use_extension(REST)
 ```
 
 ## Usage
@@ -611,8 +611,8 @@ The query language is inspired to the MongoDB query language, and provides the f
 | $exists | `bool` | matches not null or null values |
 | $like | `str` | matches specified like expression |
 | $ilike | `str` | case insensitive $like |
-| $regex | `str` | matches specified regex expression |
-| $iregex | `str` | case insensitive $regex |
+| $contains | `str` | matches values containing specified value |
+| $icontains | `str` | case insensitive $contains |
 | $geo.contains | `GeoDict` | GIS `ST_Contains` |
 | $geo.equals | `GeoDict` | GIS `ST_Equals` |
 | $geo.intersects | `GeoDict` | GIS `ST_Intersects` |
@@ -631,6 +631,103 @@ The JSON condition always have fields' names as keys (except for `$and`, `$or`, 
     "priority": {"$gte": 5}
 }
 ```
+
+### OpenAPI schemas
+
+Emmett-REST provides utilities to automatically generate OpenAPI schemas and relevant UI.
+
+In order to produce JSON and YAML schemas, you can instantiate a `docs` module:
+
+```python
+docs = rest.docs_module(
+    __name__,
+    "api_docs",
+    title="My APIs",
+    version="1",
+    modules_tree_prefix="api.v1"
+)
+```
+
+As you can see, the `docs_module` methods requires a `modules_tree_prefix` parameter which instructs REST extensions which modules should be included in the schema.
+
+> **Note:** ensure to define your REST modules before instantiating the OpenAPI one, as the latter will need modules to be pre-defined in order to make the inspection.
+
+The `docs_module` method accepts several parameters (*bold ones are required*) for its configuration:
+
+| parameter | default | description |
+| --- | --- | --- |
+| **import_name** | | as for standard modules |
+| **name** | | as for standard modules |
+| **title** | | the title for the OpenAPI schema |
+| **version** | | version for the OpenAPI schema |
+| **modules\_tree\_prefix** | | a prefix for modules names to be included in the schema |
+| description | `None` | general description for the schema |
+| tags | `None` | tags for the schema |
+| servers | `None` | servers for the schema |
+| terms\_of\_service | `None` | terms of service for the schema |
+| contact | `None` | contact information for the schema |
+| license\_info | `None` | license information for the schema |
+| security\_schemes | `None` | security information for the schema |
+| produce\_schemas | `False` | wheter to generate OpenAPI *schema* resources from modules serializers in addition to endpoints |
+| expose\_ui | `None` | wheter to expose UI (under default behaviour will match the application debug flag) |
+| ui\_path | `/docs` | path for the UI component |
+| url\_prefix | `None` | as for standard modules |
+| hostname | `None` | as for standard modules |
+
+Under default behaviour, Emmett-REST will generate OpenAPI schema considering your modules endpoints, inferring types from your models, serializers and parsers.
+
+#### Customising endpoints grouping
+
+Under default behaviour, endpoints in generated OpenAPI schema are grouped by module. In case you need to change this, you can use the docs module `regroup` method:
+
+```python
+docs.regroup("api.v1.some_module", "api.v1.another_module")
+```
+
+#### OpenAPI modules' methods
+
+Emmett-REST provides an `openapi` object in your REST modules to enable schema customisations. Specifically, this allows you to customise the serializers and parsers specs for your module methods:
+
+- `RESTModule.openapi.define.serializer(Serializer, methods)` lets you specify different serialization specs for the given methods
+- `RESTModule.openapi.define.parser(Parser, methods)` lets you specify different deserialization specs for the given methods
+
+#### OpenAPI decorators
+
+Emmett-REST provides an `openapi` decorator to allow definition of additional routes and customisation of OpenAPI schema. Let's see them in detail.
+
+##### include
+
+Used to include a custom route in the resulting OpenAPI schema:
+
+```
+from emmett_rest.openapi import openapi
+
+@mymodule.route()
+@openapi.include
+async def custom_method():
+    ...
+```
+
+##### define
+
+Used to specify schemes and attributes in different contexts. The `define` group provides several decorators with specific use-cases:
+
+- `openapi.define.fields` let you specify the type and default values on serializers and parsers for conditions where such data cannot be directly inferred
+- `openapi.define.request` let you specify request specs on custom endpoints
+- `openapi.define.response` let you specify response specs on custom endpoints
+- `openapi.define.response_default_errors` let you re-use standard response errors on custom endpoints
+- `openapi.define.serializer` let you re-use a `Serializer` spec on custom endpoints
+- `openapi.define.parser` let you re-use a `Parser` spec on custom endpoints
+
+##### describe
+
+Used to describe OpenAPI schemes in different contexts. The `describe` group provides several decorators with specific use-cases:
+
+- `openapi.describe` let you specify a summary and description on custom endpoints
+- `openapi.describe.summary` let you specify a summary for custom endpoints
+- `openapi.describe.description` let you specify a description for custom endpoints
+- `openapi.describe.request` let you specify descriptions for request schemes
+- `openapi.describe.response` let you specify descriptions for response schemes
 
 ### Customizing REST modules
 

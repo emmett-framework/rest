@@ -9,9 +9,12 @@
     :license: BSD-3-Clause
 """
 
+from typing import Any, Dict, List, Optional, Type, Union
+
 from emmett.extensions import Extension, Signals, listen_signal
 from emmett.orm.models import MetaModel
 
+from .openapi.mod import OpenAPIModule
 from .rest import AppModule, RESTModule
 from .parsers import Parser
 from .serializers import Serializer
@@ -82,3 +85,58 @@ class REST(Extension):
     @property
     def parse_params(self):
         return self._parse_params
+
+    def docs_module(
+        self,
+        import_name: str,
+        name: str,
+        title: str,
+        version: str,
+        modules_tree_prefix: str,
+        description: Optional[str] = None,
+        tags: Optional[List[Dict[str, Any]]] = None,
+        servers: Optional[List[Dict[str, Union[str, Any]]]] = None,
+        terms_of_service: Optional[str] = None,
+        contact: Optional[Dict[str, Union[str, Any]]] = None,
+        license_info: Optional[Dict[str, Union[str, Any]]] = None,
+        security_schemes: Optional[Dict[str, Any]] = None,
+        produce_schemas: bool = False,
+        expose_ui: Optional[bool] = None,
+        ui_path: str = "/docs",
+        url_prefix: Optional[str] = None,
+        hostname: Optional[str] = None,
+        module_class: Optional[Type[OpenAPIModule]] = None,
+        **kwargs: Any
+    ):
+        module_class = module_class or OpenAPIModule
+        return module_class.from_app(
+            self.app,
+            import_name=import_name,
+            name=name,
+            template_folder=None,
+            template_path=None,
+            static_folder=None,
+            static_path=None,
+            url_prefix=url_prefix,
+            hostname=hostname,
+            cache=None,
+            root_path=None,
+            pipeline=[],
+            injectors=[],
+            opts={
+                'title': title,
+                'version': version,
+                'modules_tree_prefix': modules_tree_prefix,
+                'description': description,
+                'tags': tags,
+                'servers': servers,
+                'terms_of_service': terms_of_service,
+                'contact': contact,
+                'license_info': license_info,
+                'security_schemes': security_schemes,
+                'produce_schemas': produce_schemas,
+                'expose_ui': expose_ui,
+                'ui_path': ui_path
+            },
+            **kwargs
+        )
