@@ -1,6 +1,6 @@
 ## API Reference
 
-The {{ =title }} is organized around REST. Our API has predictable resource-oriented URLs, accepts form-encoded request bodies, returns JSON-encoded responses, and uses standard HTTP response codes, authentication, and verbs.
+The {{ =title }} is organized around REST. Our API has predictable resource-oriented URLs, accepts JSON-encoded or form-encoded request bodies, returns JSON-encoded responses, and uses standard HTTP response codes, authentication, and verbs.
 
 ## Pagination
 
@@ -18,7 +18,6 @@ API resources implementing "list" methods might have support for filtering. Thes
         ("$ne", "any", "matches values not equal to argument"),
         ("$and", "list[mapping[any]]", "logical AND"),
         ("$or", "list[mapping[any]]", "logical OR"),
-        ("$nor", "list[mapping[any]]", "logical NOR"),
         ("$not", "mapping[any]", "invert argument"),
         ("$in", "list[any]", "matches values equal to any argument element"),
         ("$nin", "list[any]", "matches values not equal to argument elements"),
@@ -27,6 +26,8 @@ API resources implementing "list" methods might have support for filtering. Thes
         ("$lte", "any", "matches values less or equal than argument"),
         ("$gte", "any", "matches values greater or equal than argument"),
         ("$exists", "boolean", "matches not null or null values"),
+        ("$contains", "string", "text search (case sensitive)"),
+        ("$icontains", "string", "text search (case insensitive)"),
         ("$like", "string", "like match (case sensitive)"),
         ("$ilike", "string", "like match (case insensitive)"),
         ("$geo.contains", "GeoJSON", "GIS ST_Contains"),
