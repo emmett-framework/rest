@@ -9,7 +9,7 @@
     :license: BSD-3-Clause
 """
 
-from typing import Any, Optional, Type
+from typing import Any, Dict, List, Optional, Type, Union
 
 from emmett.extensions import Extension, Signals, listen_signal
 from emmett.orm.models import MetaModel
@@ -94,6 +94,12 @@ class REST(Extension):
         version: str,
         modules_tree_prefix: str,
         description: Optional[str] = None,
+        tags: Optional[List[Dict[str, Any]]] = None,
+        servers: Optional[List[Dict[str, Union[str, Any]]]] = None,
+        terms_of_service: Optional[str] = None,
+        contact: Optional[Dict[str, Union[str, Any]]] = None,
+        license_info: Optional[Dict[str, Union[str, Any]]] = None,
+        security_schemes: Optional[Dict[str, Any]] = None,
         produce_schemas: bool = False,
         expose_ui: Optional[bool] = None,
         ui_path: str = "/docs",
@@ -122,6 +128,12 @@ class REST(Extension):
                 'version': version,
                 'modules_tree_prefix': modules_tree_prefix,
                 'description': description,
+                'tags': tags,
+                'servers': servers,
+                'terms_of_service': terms_of_service,
+                'contact': contact,
+                'license_info': license_info,
+                'security_schemes': security_schemes,
                 'produce_schemas': produce_schemas,
                 'expose_ui': expose_ui,
                 'ui_path': ui_path

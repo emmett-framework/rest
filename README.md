@@ -662,6 +662,12 @@ The `docs_module` method accepts several parameters (*bold ones are required*) f
 | **version** | | version for the OpenAPI schema |
 | **modules\_tree\_prefix** | | a prefix for modules names to be included in the schema |
 | description | `None` | general description for the schema |
+| tags | `None` | tags for the schema |
+| servers | `None` | servers for the schema |
+| terms\_of\_service | `None` | terms of service for the schema |
+| contact | `None` | contact information for the schema |
+| license\_info | `None` | license information for the schema |
+| security\_schemes | `None` | security information for the schema |
 | produce\_schemas | `False` | wheter to generate OpenAPI *schema* resources from modules serializers in addition to endpoints |
 | expose\_ui | `None` | wheter to expose UI (under default behaviour will match the application debug flag) |
 | ui\_path | `/docs` | path for the UI component |

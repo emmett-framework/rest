@@ -10,7 +10,7 @@
 """
 
 from importlib.resources import read_text
-from typing import Any, Optional
+from typing import Any, Dict, List, Optional, Union
 
 from emmett import App, AppModule, response, url
 from emmett.cache import RamCache, RouteCacheRule
@@ -31,6 +31,12 @@ class OpenAPIModule(AppModule):
         version: str,
         modules_tree_prefix: str,
         description: Optional[str] = None,
+        tags: Optional[List[Dict[str, Any]]] = None,
+        servers: Optional[List[Dict[str, Union[str, Any]]]] = None,
+        terms_of_service: Optional[str] = None,
+        contact: Optional[Dict[str, Union[str, Any]]] = None,
+        license_info: Optional[Dict[str, Union[str, Any]]] = None,
+        security_schemes: Optional[Dict[str, Any]] = None,
         produce_schemas: bool = False,
         expose_ui: Optional[bool] = None,
         ui_path: str = "/docs",
@@ -50,6 +56,12 @@ class OpenAPIModule(AppModule):
         self.title = title
         self.description = description
         self.version = version
+        self.tags = tags
+        self.servers = servers
+        self.terms_of_service = terms_of_service
+        self.contact = contact
+        self.license_info = license_info
+        self.security_schemes = security_schemes
         self.produce_schemas = produce_schemas
         self.modules_list = []
         self.modules_tags = {}
@@ -94,7 +106,12 @@ class OpenAPIModule(AppModule):
             description=self.description or self._default_description,
             modules=self.modules_list,
             modules_tags=self.modules_tags,
-            produce_schemas=self.produce_schemas
+            produce_schemas=self.produce_schemas,
+            tags=self.tags,
+            servers=self.servers,
+            terms_of_service=self.terms_of_service,
+            license_info=self.license_info,
+            security_schemes=self.security_schemes
         )
 
     @cachedprop

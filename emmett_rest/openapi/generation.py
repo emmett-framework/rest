@@ -378,7 +378,8 @@ class OpenAPIGenerator:
         servers: Optional[List[Dict[str, Union[str, Any]]]] = None,
         terms_of_service: Optional[str] = None,
         contact: Optional[Dict[str, Union[str, Any]]] = None,
-        license_info: Optional[Dict[str, Union[str, Any]]] = None
+        license_info: Optional[Dict[str, Union[str, Any]]] = None,
+        security_schemes: Optional[Dict[str, Any]] = None,
     ):
         self.openapi_version = openapi_version
         self.info: Dict[str, Any] = {"title": title, "version": version}
@@ -394,6 +395,7 @@ class OpenAPIGenerator:
         self.modules_tags = modules_tags
         self.tags = tags or []
         self.servers = servers or []
+        self.security_schemes = security_schemes or {}
 
     def fields_from_model(
         self,
@@ -528,7 +530,6 @@ class OpenAPIGenerator:
         route_kind: str,
         method: str
     ) -> Dict[str, Any]:
-        # TODO: description, deprecated
         return {
             "summary": _def_summaries[route_kind].format(
                 entity=module.name.rsplit(".", 1)[-1]
@@ -537,7 +538,6 @@ class OpenAPIGenerator:
                 entity=module.name.rsplit(".", 1)[-1]
             ),
             "operationId": f"{module.name}.{route_kind}.{method}".replace(".", "_"),
-            # "tags": [module.name]
             "tags": [modules_tags[module.name]]
         }
 
@@ -910,6 +910,8 @@ class OpenAPIGenerator:
                 v["model"]: definitions[k]["schema"]
                 for k, v in sorted(definitions.items(), key=lambda i: i[1]["model"])
             }
+        if self.security_schemes:
+            components["securitySchemes"] = self.security_schemes
         if components:
             data["components"] = components
         data["paths"] = paths
@@ -932,6 +934,7 @@ def build_schema(
     terms_of_service: Optional[str] = None,
     contact: Optional[Dict[str, Union[str, Any]]] = None,
     license_info: Optional[Dict[str, Union[str, Any]]] = None,
+    security_schemes: Optional[Dict[str, Any]] = None,
     generator_cls: Optional[Type[OpenAPIGenerator]] = None
 ) -> Dict[str, Any]:
     generator_cls = generator_cls or OpenAPIGenerator
@@ -946,6 +949,7 @@ def build_schema(
         servers=servers,
         terms_of_service=terms_of_service,
         contact=contact,
-        license_info=license_info
+        license_info=license_info,
+        security_schemes=security_schemes
     )
     return generator(produce_schemas=produce_schemas)
