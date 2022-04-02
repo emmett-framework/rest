@@ -611,8 +611,8 @@ The query language is inspired to the MongoDB query language, and provides the f
 | $exists | `bool` | matches not null or null values |
 | $like | `str` | matches specified like expression |
 | $ilike | `str` | case insensitive $like |
-| $regex | `str` | matches specified regex expression |
-| $iregex | `str` | case insensitive $regex |
+| $contains | `str` | matches values containing specified value |
+| $icontains | `str` | case insensitive $contains |
 | $geo.contains | `GeoDict` | GIS `ST_Contains` |
 | $geo.equals | `GeoDict` | GIS `ST_Equals` |
 | $geo.intersects | `GeoDict` | GIS `ST_Intersects` |

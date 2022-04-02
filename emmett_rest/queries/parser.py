@@ -39,6 +39,12 @@ _query_operators = {
     '$exists': lambda field, value: (
         operator.ne(field, None) if value else operator.eq(field, None)
     ),
+    '$contains': lambda field, value: (
+        operator.methodcaller('contains', value, case_sensitive=True)(field)
+    ),
+    '$icontains': lambda field, value: (
+        operator.methodcaller('contains', value, case_sensitive=False)(field)
+    ),
     '$like': lambda field, value: (
         operator.methodcaller('like', value, case_sensitive=True)(field)
     ),
@@ -117,7 +123,6 @@ op_parsers = {key: _generic_op_parser for key in op_validators.keys()}
 op_parsers.update({
     '$or': _glue_op_parser,
     '$and': _glue_op_parser,
-    '$nor': _glue_op_parser,
     '$not': _dict_op_parser
 })
 
