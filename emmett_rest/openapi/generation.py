@@ -661,7 +661,8 @@ class OpenAPIGenerator:
             path_relative, methods = module._methods_map[path_kind]
             if not isinstance(methods, list):
                 methods = [methods]
-            path_scoped: str = module.url_prefix + path_relative
+            path_scoped: str = module.app._router_http._prefix_main + '/' + \
+                               module.url_prefix + path_relative
             if path_scoped.endswith("/") and len(path_scoped) > 1:
                 path_scoped = path_scoped[:-1]
             path_params = {}
