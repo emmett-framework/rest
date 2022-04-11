@@ -648,6 +648,13 @@ class OpenAPIGenerator:
         rv: Dict[str, Dict[str, Dict[str, Any]]] = {}
         mod_name = module.name.rsplit('.', 1)[-1]
 
+        mod_prefix: str = module.url_prefix or "/"
+        path_prefix: str = (
+            module.app._router_http._prefix_main + (
+                f"/{mod_prefix}" if not mod_prefix.startswith("/") else mod_prefix
+            )
+        )
+
         for path_kind in set(module.enabled_methods) & {
             "index",
             "create",
@@ -661,8 +668,7 @@ class OpenAPIGenerator:
             path_relative, methods = module._methods_map[path_kind]
             if not isinstance(methods, list):
                 methods = [methods]
-            path_scoped: str = module.app._router_http._prefix_main + '/' + \
-                               module.url_prefix + path_relative
+            path_scoped: str = path_prefix + path_relative
             if path_scoped.endswith("/") and len(path_scoped) > 1:
                 path_scoped = path_scoped[:-1]
             path_params = {}
