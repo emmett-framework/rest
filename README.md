@@ -354,7 +354,7 @@ def _tasks_meta(self, dbset, pagination):
 
 ### Serialization
 
-Under the default behaviour, the REST extension will use the `form_rw` attribute of the involved model, and overwrite the results with the contents of the `rest_rw` attribute if present.
+Under the default behaviour, the REST extension will use the `fields_rw` attribute of the involved model, and overwrite the results with the contents of the `rest_rw` attribute if present.
 
 For example, with this model:
 
@@ -366,7 +366,7 @@ class Task(Model):
     is_completed = Field.bool()
     created_at = Field.datetime()
     
-    form_rw = {
+    fields_rw = {
         'id': False,
         'created_at': False
     }
@@ -382,7 +382,7 @@ class Task(Model):
     is_completed = Field.bool()
     created_at = Field.datetime()
     
-    form_rw = {
+    fields_rw = {
         'id': False,
         'created_at': False
     }
@@ -434,7 +434,7 @@ class TaskSerializer(Serializer):
 This is the complete list of rules that the extension will take over serializers:
 
 - `attributes` is read as first step
-- the `form_rw` and `rest_rw` attributes of the model are used to fill `attributes` list when this is empty
+- the `fields_rw` and `rest_rw` attributes of the model are used to fill `attributes` list when this is empty
 - the fields in the `include` list will be added to `attributes`
 - the fields in the `exclude` list will be removed from `attributes`
 - every method defined in the serializer not starting with `_` will be called over serialization and its return value will be added to the JSON object in a key named as the method
@@ -466,7 +466,7 @@ def task_list(dbset):
 
 Opposite to the serialization, you will have input parsing to parse JSON requests and perform operations on the records.
 
-Under the default behaviour, the REST extension will use the `form_rw` attribute of the involved model, and overwrite the results with the contents of the `rest_rw` attribute if present.
+Under the default behaviour, the REST extension will use the `fields_rw` attribute of the involved model, and overwrite the results with the contents of the `rest_rw` attribute if present.
 
 For example, with this model:
 
@@ -478,7 +478,7 @@ class Task(Model):
     is_completed = Field.bool()
     created_at = Field.datetime()
     
-    form_rw = {
+    fields_rw = {
         'id': False,
         'created_at': False
     }
@@ -494,7 +494,7 @@ class Task(Model):
     is_completed = Field.bool()
     created_at = Field.datetime()
     
-    form_rw = {
+    fields_rw = {
         'id': False,
         'created_at': False
     }
