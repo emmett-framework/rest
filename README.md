@@ -686,8 +686,9 @@ docs.regroup("api.v1.some_module", "api.v1.another_module")
 
 #### OpenAPI modules' methods
 
-Emmett-REST provides an `openapi` object in your REST modules to enable schema customisations. Specifically, this allows you to customise the serializers and parsers specs for your module methods:
+Emmett-REST provides an `openapi` object in your REST modules to enable schema customisations. Specifically, this allows you to customise naming, serializers and parsers specs for your module methods:
 
+- `RESTModule.openapi.describe.entity(name)` lets you specify a custom name for the module entity
 - `RESTModule.openapi.define.serializer(Serializer, methods)` lets you specify different serialization specs for the given methods
 - `RESTModule.openapi.define.parser(Parser, methods)` lets you specify different deserialization specs for the given methods
 
@@ -699,7 +700,7 @@ Emmett-REST provides an `openapi` decorator to allow definition of additional ro
 
 Used to include a custom route in the resulting OpenAPI schema:
 
-```
+```python
 from emmett_rest.openapi import openapi
 
 @mymodule.route()

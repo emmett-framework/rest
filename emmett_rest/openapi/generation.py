@@ -530,13 +530,13 @@ class OpenAPIGenerator:
         route_kind: str,
         method: str
     ) -> Dict[str, Any]:
+        entity_name = (
+            module._openapi_specs.get("entity_name") or
+            module.name.rsplit(".", 1)[-1]
+        )
         return {
-            "summary": _def_summaries[route_kind].format(
-                entity=module.name.rsplit(".", 1)[-1]
-            ),
-            "description": _def_descriptions[route_kind].format(
-                entity=module.name.rsplit(".", 1)[-1]
-            ),
+            "summary": _def_summaries[route_kind].format(entity=entity_name),
+            "description": _def_descriptions[route_kind].format(entity=entity_name),
             "operationId": f"{module.name}.{route_kind}.{method}".replace(".", "_"),
             "tags": [modules_tags[module.name]]
         }

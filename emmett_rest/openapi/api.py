@@ -49,9 +49,15 @@ class ModuleDefine(ModuleSpec):
             self.mod._openapi_specs["parsers"][route] = parser
 
 
+class ModuleDescribe(ModuleSpec):
+    def entity(self, name: str):
+        self.mod._openapi_specs["entity_name"] = name
+
+
 class ModuleOpenAPI:
     def __init__(self, module: RESTModule):
         self.define = ModuleDefine(module)
+        self.describe = ModuleDescribe(module)
 
 
 class OpenAPIDefine:
