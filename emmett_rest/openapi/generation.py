@@ -647,6 +647,7 @@ class OpenAPIGenerator:
     ) -> Dict[str, Dict[str, Dict[str, Any]]]:
         rv: Dict[str, Dict[str, Dict[str, Any]]] = {}
         mod_name = module.name.rsplit('.', 1)[-1]
+        entity_name = module._openapi_specs.get("entity_name") or mod_name
 
         mod_prefix: str = module.url_prefix or "/"
         path_prefix: str = (
@@ -791,12 +792,12 @@ class OpenAPIGenerator:
                             path_target,
                             "_openapi_desc_summary",
                             f"{{name}} {path_name.rsplit('.', 1)[-1]}"
-                        ).format(name=mod_name),
+                        ).format(name=entity_name),
                         "description": getattr(
                             path_target,
                             "_openapi_desc_description",
                             ""
-                        ).format(name=mod_name),
+                        ).format(name=entity_name),
                         "operationId": f"{path_name}.{method}".replace(".", "_"),
                         "tags": [modules_tags[module.name]]
                     }
