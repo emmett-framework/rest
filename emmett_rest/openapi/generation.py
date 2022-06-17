@@ -772,7 +772,7 @@ class OpenAPIGenerator:
         ):
             methods = path_data.methods
             for path_relative in path_data.paths:
-                path_scoped: str = module.url_prefix + path_relative
+                path_scoped: str = path_prefix + path_relative
                 if path_scoped.endswith("/") and len(path_scoped) > 1:
                     path_scoped = path_scoped[:-1]
                 path_params = {}
