@@ -110,6 +110,7 @@ class OpenAPIModule(AppModule):
             tags=self.tags,
             servers=self.servers,
             terms_of_service=self.terms_of_service,
+            contact=self.contact,
             license_info=self.license_info,
             security_schemes=self.security_schemes
         )
