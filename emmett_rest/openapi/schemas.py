@@ -265,7 +265,7 @@ class PathItem(BaseModel):
         extra = "allow"
 
 
-class SecuritySchemeType(Enum):
+class SecuritySchemeType(str, Enum):
     apiKey = "apiKey"
     http = "http"
     oauth2 = "oauth2"
@@ -280,7 +280,7 @@ class SecurityBase(BaseModel):
         extra = "allow"
 
 
-class APIKeyIn(Enum):
+class APIKeyIn(str, Enum):
     query = "query"
     header = "header"
     cookie = "cookie"
