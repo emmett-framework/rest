@@ -694,7 +694,12 @@ class OpenAPIGenerator:
                 operation_responses = self.build_operation_common_responses(path_kind)
                 if operation_parameters:
                     operation["parameters"] = operation_parameters
-                if path_kind in ["create", "update"]:
+                if (
+                    path_kind in ["create", "update"] or (
+                        path_kind == "delete" and
+                        "delete" in module._openapi_specs["parsers"]
+                    )
+                ):
                     operation["requestBody"] = {
                         "content": {
                             "application/json": {
