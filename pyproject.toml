@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "Emmett-REST"
-version = "1.4.4"
+version = "1.4.5"
 description = "REST extension for Emmett framework"
 authors = ["Giovanni Barillari <gi0baro@d4net.org>"]
 license = "BSD-3-Clause"
