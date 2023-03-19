@@ -4,7 +4,6 @@ import os
 import pytest
 
 from emmett import App, sdict
-from emmett.asgi.loops import loops
 from emmett.orm import Database
 from emmett.orm.migrations.utils import generate_runtime_migration
 from emmett.parsers import Parsers
@@ -23,13 +22,6 @@ def json_load():
 
 
 @pytest.fixture(scope='session')
-def event_loop():
-    loop = loops.get('auto')
-    yield loop
-    loop.close()
-
-
-@pytest.fixture(scope='session')
 def db_config():
     config = sdict()
     config.adapter = 'postgres:psycopg2'
@@ -42,7 +34,7 @@ def db_config():
 
 
 @pytest.fixture(scope='session')
-def app(event_loop, db_config):
+def app(db_config):
     rv = App(__name__)
     rv.config.db = db_config
     rv.config.REST.use_save = False
