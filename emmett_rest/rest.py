@@ -16,10 +16,12 @@ import operator
 from functools import reduce
 from typing import Any, Callable, Dict, List, Optional, Union
 
-from emmett import AppModule, request, response, sdict
+from emmett import request, response, sdict
+from emmett.app import AppModule, AppModulesGrouped
 from emmett.extensions import Extension
 from emmett.orm.objects import Row, Set as DBSet
 from emmett.pipeline import Pipe
+from emmett.routing.router import RoutingCtxGroup
 from emmett.tools.service import JSONServicePipe
 
 from .openapi.api import ModuleOpenAPI
@@ -779,4 +781,193 @@ class RESTModule(AppModule):
 
     def meta_builder(self, f):
         self.build_meta = f
+        return f
+
+
+class RESTModulesGrouped(AppModulesGrouped):
+    @property
+    def allowed_sorts(self) -> List[str]:
+        return self.modules[0]._sortable_fields
+
+    @allowed_sorts.setter
+    def allowed_sorts(self, val: List[str]):
+        for module in self.modules:
+            module._sortable_fields = val
+            module._sortable_dict = {
+                field: module.model.table[field] for field in module._sortable_fields
+            }
+
+    @property
+    def query_allowed_fields(self) -> List[str]:
+        return self.modules[0]._queryable_fields
+
+    @query_allowed_fields.setter
+    def query_allowed_fields(self, val: List[str]):
+        for module in self.modules:
+            module._queryable_fields = val
+            module._json_query_pipe.set_accepted()
+
+    @property
+    def grouping_allowed_fields(self) -> List[str]:
+        return self.modules[0]._groupable_fields
+
+    @grouping_allowed_fields.setter
+    def grouping_allowed_fields(self, val: List[str]):
+        for module in self.modules:
+            module._groupable_fields = val
+            module._group_field_pipe.set_accepted()
+
+    @property
+    def stats_allowed_fields(self) -> List[str]:
+        return self.modules[0]._statsable_fields
+
+    @stats_allowed_fields.setter
+    def stats_allowed_fields(self, val: List[str]):
+        for module in self.modules:
+            module._statsable_fields = val
+            module._stats_field_pipe.set_accepted()
+
+    def get_dbset(
+        self,
+        f: Callable[[RESTModule], DBSet]
+    ) -> Callable[[RESTModule], DBSet]:
+        for module in self.modules:
+            module._fetcher_method = f
+        return f
+
+    def get_row(
+        self,
+        f: Callable[[DBSet], Optional[Row]]
+    ) -> Callable[[DBSet], Optional[Row]]:
+        for module in self.modules:
+            module._select_method = f
+        return f
+
+    def before_create(
+        self,
+        f: Callable[[sdict], None]
+    ) -> Callable[[sdict], None]:
+        for module in self.modules:
+            module._before_create_callbacks.append(f)
+        return f
+
+    def before_update(
+        self,
+        f: Callable[[int, sdict], None]
+    ) -> Callable[[int, sdict], None]:
+        for module in self.modules:
+            module._before_update_callbacks.append(f)
+        return f
+
+    def after_parse_params(
+        self,
+        f: Callable[[sdict], None]
+    ) -> Callable[[sdict], None]:
+        for module in self.modules:
+            module._after_params_callbacks.append(f)
+        return f
+
+    def after_create(self, f: Callable[[Row], None]) -> Callable[[Row], None]:
+        for module in self.modules:
+            module._after_create_callbacks.append(f)
+        return f
+
+    def after_update(self, f: Callable[[Row], None]) -> Callable[[Row], None]:
+        for module in self.modules:
+            module._after_update_callbacks.append(f)
+        return f
+
+    def after_delete(self, f: Callable[[int], None]) -> Callable[[int], None]:
+        for module in self.modules:
+            module._after_delete_callbacks.append(f)
+        return f
+
+    def index(self, pipeline=[]):
+        routes = []
+        for module in self.modules:
+            route_pipeline = module.index_pipeline + pipeline
+            routes.append(
+                module.route(
+                    module._path_base,
+                    pipeline=route_pipeline,
+                    methods='get',
+                    name='index'
+                )
+            )
+        return RoutingCtxGroup(routes)
+
+    def read(self, pipeline=[]):
+        routes = []
+        for module in self.modules:
+            route_pipeline = module.read_pipeline + pipeline
+            routes.append(
+                module.route(
+                    module._path_rid,
+                    pipeline=route_pipeline,
+                    methods='get',
+                    name='read'
+                )
+            )
+        return RoutingCtxGroup(routes)
+
+    def create(self, pipeline=[]):
+        routes = []
+        for module in self.modules:
+            route_pipeline = module.create_pipeline + pipeline
+            routes.append(
+                module.route(
+                    module._path_base,
+                    pipeline=route_pipeline,
+                    methods='post',
+                    name='create'
+                )
+            )
+        return RoutingCtxGroup(routes)
+
+    def update(self, pipeline=[]):
+        routes = []
+        for module in self.modules:
+            route_pipeline = module.update_pipeline + pipeline
+            routes.append(
+                module.route(
+                    module._path_rid,
+                    pipeline=route_pipeline,
+                    methods=['put', 'patch'],
+                    name='update'
+                )
+            )
+        return RoutingCtxGroup(routes)
+
+    def delete(self, pipeline=[]):
+        routes = []
+        for module in self.modules:
+            route_pipeline = module.delete_pipeline + pipeline
+            routes.append(
+                module.route(
+                    module._path_rid,
+                    pipeline=route_pipeline,
+                    methods='delete',
+                    name='delete'
+                )
+            )
+        return RoutingCtxGroup(routes)
+
+    def on_400(self, f):
+        for module in self.modules:
+            module.error_400 = f
+        return f
+
+    def on_404(self, f):
+        for module in self.modules:
+            module.error_404 = f
+        return f
+
+    def on_422(self, f):
+        for module in self.modules:
+            module.error_422 = f
+        return f
+
+    def meta_builder(self, f):
+        for module in self.modules:
+            module.build_meta = f
         return f

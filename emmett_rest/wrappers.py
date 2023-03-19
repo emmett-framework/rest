@@ -12,10 +12,10 @@
 from functools import wraps
 from typing import Any, Callable, List, Optional, Type, Union
 
-from emmett import App
+from emmett.app import App, AppModuleGroup
 from emmett.extensions import Extension
 
-from .rest import AppModule, RESTModule
+from .rest import AppModule, RESTModule, RESTModulesGrouped
 from .typing import ModelType, ParserType, SerializerType
 
 
@@ -126,6 +126,65 @@ def wrap_module_from_module(ext: Extension) -> Callable[..., RESTModule]:
             opts=kwargs
         )
     return rest_module_from_module
+
+
+def wrap_module_from_modulegroup(ext: Extension) -> Callable[..., RESTModule]:
+    def rest_module_from_modulegroup(
+        appmodgroup: AppModuleGroup,
+        import_name: str,
+        name: str,
+        model: ModelType,
+        serializer: Optional[SerializerType] = None,
+        parser: Optional[ParserType] = None,
+        enabled_methods: Optional[List[str]] = None,
+        disabled_methods: Optional[List[str]] = None,
+        default_sort: Optional[str] = None,
+        use_save: Optional[bool] = None,
+        use_destroy: Optional[bool] = None,
+        list_envelope: Optional[str] = None,
+        single_envelope: Optional[Union[str, bool]] = None,
+        meta_envelope: Optional[str] = None,
+        groups_envelope: Optional[str] = None,
+        use_envelope_on_parse: Optional[bool] = None,
+        serialize_meta: Optional[bool] = None,
+        base_path: Optional[str] = None,
+        id_path: Optional[str] = None,
+        url_prefix: Optional[str] = None,
+        hostname: Optional[str] = None,
+        module_class: Optional[Type[RESTModule]] = None,
+        **kwargs: Any
+    ) -> RESTModulesGrouped:
+        module_class = module_class or ext.config.default_module_class
+        mods = []
+        for module in appmodgroup.modules:
+            mod = module_class.from_module(
+                ext,
+                module,
+                import_name,
+                name,
+                model,
+                serializer=serializer,
+                parser=parser,
+                enabled_methods=enabled_methods,
+                disabled_methods=disabled_methods,
+                default_sort=default_sort,
+                use_save=use_save,
+                use_destroy=use_destroy,
+                list_envelope=list_envelope,
+                single_envelope=single_envelope,
+                meta_envelope=meta_envelope,
+                groups_envelope=groups_envelope,
+                use_envelope_on_parse=use_envelope_on_parse,
+                serialize_meta=serialize_meta,
+                base_path=base_path,
+                id_path=id_path,
+                url_prefix=url_prefix,
+                hostname=hostname,
+                opts=kwargs
+            )
+            mods.append(mod)
+        return RESTModulesGrouped(*mods)
+    return rest_module_from_modulegroup
 
 
 def wrap_method_on_obj(method, obj):

@@ -11,6 +11,7 @@
 
 from typing import Any, Dict, List, Optional, Type, Union
 
+from emmett.app import AppModuleGroup
 from emmett.extensions import Extension, Signals, listen_signal
 from emmett.orm.models import MetaModel
 
@@ -21,7 +22,8 @@ from .serializers import Serializer
 from .wrappers import (
     wrap_method_on_obj,
     wrap_module_from_app,
-    wrap_module_from_module
+    wrap_module_from_module,
+    wrap_module_from_modulegroup
 )
 
 
@@ -69,6 +71,7 @@ class REST(Extension):
 
     def on_load(self):
         setattr(AppModule, 'rest_module', wrap_module_from_module(self))
+        setattr(AppModuleGroup, 'rest_module', wrap_module_from_modulegroup(self))
         self.app.rest_module = wrap_method_on_obj(
             wrap_module_from_app(self),
             self.app
