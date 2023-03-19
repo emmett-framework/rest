@@ -1,6 +1,16 @@
 Emmett-REST changelog
 =====================
 
+Version 1.5
+-----------
+
+*Released on March 19th 2023*
+
+- Update Emmett to 2.5
+- Introduce official Python 3.11 support
+- Drop Python 3.7 support
+- Add support for application modules groups
+
 Version 1.4
 -----------
 
