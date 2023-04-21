@@ -83,6 +83,8 @@ op_validators = {
     '$exists': op_validation_generator(bool),
     '$like': validate_default,
     '$ilike': validate_default,
+    '$contains': validate_default,
+    '$icontains': validate_default,
     '$regex': validate_default,
     '$iregex': validate_default,
     '$geo.contains': validate_geo,
