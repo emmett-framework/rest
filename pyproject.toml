@@ -1,3 +1,6 @@
+[project]
+name = "emmett-rest"
+
 [tool.poetry]
 name = "emmett-rest"
 version = "1.5.1"
