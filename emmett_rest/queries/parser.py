@@ -158,6 +158,8 @@ def _conditions_parser(
         value = query_dict[key]
         if not isinstance(value, dict):
             value = {'$eq': value}
+        if not value:
+            continue
         inner_conditions.append(
             _conditions_parser(
                 op_set, op_validators, op_parsers,
