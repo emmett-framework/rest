@@ -1,6 +1,14 @@
 Emmett-REST changelog
 =====================
 
+Version 1.6
+-----------
+
+*Released on October 15th 2024*
+
+- Update Emmett to 2.6
+- Add Python 3.13 support
+
 Version 1.5
 -----------
 
