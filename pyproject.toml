@@ -35,7 +35,7 @@ classifiers = [
 
 dependencies = [
     "emmett~=2.6",
-    "pydantic~=2.0",
+    "pydantic~=1.9",
 ]
 
 [project.urls]

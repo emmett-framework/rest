@@ -34,7 +34,7 @@ def db_config():
     return config
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="function")
 def app(db_config):
     rv = App(__name__)
     rv.config.db = db_config
