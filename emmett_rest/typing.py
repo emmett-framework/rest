@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 """
-    emmett_rest.typing
-    ------------------
+emmett_rest.typing
+------------------
 
-    Provides typing helpers
+Provides typing helpers
 
-    :copyright: 2017 Giovanni Barillari
-    :license: BSD-3-Clause
+:copyright: 2017 Giovanni Barillari
+:license: BSD-3-Clause
 """
 
 from typing import Type

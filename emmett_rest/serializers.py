@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 """
-    emmett_rest.serializers
-    -----------------------
+emmett_rest.serializers
+-----------------------
 
-    Provides REST serialization tools
+Provides REST serialization tools
 
-    :copyright: 2017 Giovanni Barillari
-    :license: BSD-3-Clause
+:copyright: 2017 Giovanni Barillari
+:license: BSD-3-Clause
 """
 
 from typing import List, Optional
@@ -27,7 +27,7 @@ class Serializer:
             readable_map = {}
             for fieldname in self._model.table.fields:
                 readable_map[fieldname] = self._model.table[fieldname].readable
-            if hasattr(self._model, 'rest_rw'):
+            if hasattr(self._model, "rest_rw"):
                 self.attributes = []
                 for key, value in self._model.rest_rw.items():
                     if isinstance(value, tuple):
@@ -44,7 +44,7 @@ class Serializer:
                     self.attributes.remove(el)
         _attrs_override_ = []
         for key in dir(self):
-            if not key.startswith('_') and callable(getattr(self, key)):
+            if not key.startswith("_") and callable(getattr(self, key)):
                 _attrs_override_.append(key)
         self._attrs_override_ = _attrs_override_
         self._init()

@@ -2,9 +2,6 @@
 
 Emmett-REST is a REST extension for [Emmett framework](https://emmett.sh).
 
-[![pip version](https://img.shields.io/pypi/v/emmett-rest.svg?style=flat)](https://pypi.python.org/pypi/Emmett-REST)
-![Tests Status](https://github.com/emmett-framework/rest/workflows/Tests/badge.svg)
-
 ## In a nutshell
 
 ```python

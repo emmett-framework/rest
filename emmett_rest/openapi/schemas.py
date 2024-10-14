@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 """
-    emmett_rest.openapi.schemas
-    ---------------------------
+emmett_rest.openapi.schemas
+---------------------------
 
-    Provides OpenAPI schemas
+Provides OpenAPI schemas
 
-    :copyright: 2017 Giovanni Barillari
-    :license: BSD-3-Clause
+:copyright: 2017 Giovanni Barillari
+:license: BSD-3-Clause
 """
 
 from __future__ import annotations

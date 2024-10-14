@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 """
-    emmett_rest.ext
-    ---------------
+emmett_rest.ext
+---------------
 
-    Provides REST extension for Emmett
+Provides REST extension for Emmett
 
-    :copyright: 2017 Giovanni Barillari
-    :license: BSD-3-Clause
+:copyright: 2017 Giovanni Barillari
+:license: BSD-3-Clause
 """
 
 from typing import Any, Dict, List, Optional, Type, Union
@@ -16,66 +16,55 @@ from emmett.extensions import Extension, Signals, listen_signal
 from emmett.orm.models import MetaModel
 
 from .openapi.mod import OpenAPIModule
-from .rest import AppModule, RESTModule
 from .parsers import Parser
+from .rest import AppModule, RESTModule
 from .serializers import Serializer
-from .wrappers import (
-    wrap_method_on_obj,
-    wrap_module_from_app,
-    wrap_module_from_module,
-    wrap_module_from_modulegroup
-)
+from .wrappers import wrap_method_on_obj, wrap_module_from_app, wrap_module_from_module, wrap_module_from_modulegroup
 
 
 class REST(Extension):
-    default_config = dict(
-        default_module_class=RESTModule,
-        default_serializer=Serializer,
-        default_parser=Parser,
-        page_param='page',
-        pagesize_param='page_size',
-        sort_param='sort_by',
-        query_param='where',
-        min_pagesize=1,
-        max_pagesize=50,
-        default_pagesize=20,
-        default_sort=None,
-        base_path='/',
-        id_path='/<int:rid>',
-        list_envelope='data',
-        single_envelope=False,
-        groups_envelope='data',
-        use_envelope_on_parse=False,
-        serialize_meta=True,
-        meta_envelope='meta',
-        default_enabled_methods=[
-            'index', 'create', 'read', 'update', 'delete'
-        ],
-        default_disabled_methods=[],
-        use_save=True,
-        use_destroy=True
-    )
+    default_config = {
+        "default_module_class": RESTModule,
+        "default_serializer": Serializer,
+        "default_parser": Parser,
+        "page_param": "page",
+        "pagesize_param": "page_size",
+        "sort_param": "sort_by",
+        "query_param": "where",
+        "min_pagesize": 1,
+        "max_pagesize": 50,
+        "default_pagesize": 20,
+        "default_sort": None,
+        "base_path": "/",
+        "id_path": "/<int:rid>",
+        "list_envelope": "data",
+        "single_envelope": False,
+        "groups_envelope": "data",
+        "use_envelope_on_parse": False,
+        "serialize_meta": True,
+        "meta_envelope": "meta",
+        "default_enabled_methods": ["index", "create", "read", "update", "delete"],
+        "default_disabled_methods": [],
+        "use_save": True,
+        "use_destroy": True,
+    }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        from .serializers import serialize
         from .parsers import parse_params
+        from .serializers import serialize
+
         self._serialize = serialize
         self._parse_params = parse_params
 
     @listen_signal(Signals.before_database)
     def _configure_models_attr(self):
-        MetaModel._inheritable_dict_attrs_.append(
-            ('rest_rw', {'id': (True, False)})
-        )
+        MetaModel._inheritable_dict_attrs_.append(("rest_rw", {"id": (True, False)}))
 
     def on_load(self):
-        setattr(AppModule, 'rest_module', wrap_module_from_module(self))
-        setattr(AppModuleGroup, 'rest_module', wrap_module_from_modulegroup(self))
-        self.app.rest_module = wrap_method_on_obj(
-            wrap_module_from_app(self),
-            self.app
-        )
+        AppModule.rest_module = wrap_module_from_module(self)
+        AppModuleGroup.rest_module = wrap_module_from_modulegroup(self)
+        self.app.rest_module = wrap_method_on_obj(wrap_module_from_app(self), self.app)
 
     @property
     def module(self):
@@ -109,7 +98,7 @@ class REST(Extension):
         url_prefix: Optional[str] = None,
         hostname: Optional[str] = None,
         module_class: Optional[Type[OpenAPIModule]] = None,
-        **kwargs: Any
+        **kwargs: Any,
     ):
         module_class = module_class or OpenAPIModule
         return module_class.from_app(
@@ -127,19 +116,19 @@ class REST(Extension):
             pipeline=[],
             injectors=[],
             opts={
-                'title': title,
-                'version': version,
-                'modules_tree_prefix': modules_tree_prefix,
-                'description': description,
-                'tags': tags,
-                'servers': servers,
-                'terms_of_service': terms_of_service,
-                'contact': contact,
-                'license_info': license_info,
-                'security_schemes': security_schemes,
-                'produce_schemas': produce_schemas,
-                'expose_ui': expose_ui,
-                'ui_path': ui_path
+                "title": title,
+                "version": version,
+                "modules_tree_prefix": modules_tree_prefix,
+                "description": description,
+                "tags": tags,
+                "servers": servers,
+                "terms_of_service": terms_of_service,
+                "contact": contact,
+                "license_info": license_info,
+                "security_schemes": security_schemes,
+                "produce_schemas": produce_schemas,
+                "expose_ui": expose_ui,
+                "ui_path": ui_path,
             },
-            **kwargs
+            **kwargs,
         )

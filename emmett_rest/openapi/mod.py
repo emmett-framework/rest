@@ -1,21 +1,22 @@
 # -*- coding: utf-8 -*-
 """
-    emmett_rest.openapi.mod
-    -----------------------
+emmett_rest.openapi.mod
+-----------------------
 
-    Provides OpenAPI application module
+Provides OpenAPI application module
 
-    :copyright: 2017 Giovanni Barillari
-    :license: BSD-3-Clause
+:copyright: 2017 Giovanni Barillari
+:license: BSD-3-Clause
 """
 
 from importlib.resources import read_text
 from typing import Any, Dict, List, Optional, Union
 
 from emmett import App, AppModule, response, url
-from emmett.cache import RamCache, RouteCacheRule
+from emmett.cache import RamCache
 from emmett.tools.service import JSONServicePipe
 from emmett.utils import cachedprop
+from emmett_core.routing.cache import RouteCacheRule
 
 from ..rest import RESTModule
 from .generation import build_schema
@@ -23,7 +24,8 @@ from .helpers import YAMLPipe
 
 
 class OpenAPIModule(AppModule):
-    def __init__(self,
+    def __init__(
+        self,
         app: App,
         name: str,
         import_name: str,
@@ -42,16 +44,9 @@ class OpenAPIModule(AppModule):
         ui_path: str = "/docs",
         url_prefix: Optional[str] = None,
         hostname: Optional[str] = None,
-        **kwargs: Any
+        **kwargs: Any,
     ):
-        super().__init__(
-            app,
-            name,
-            import_name,
-            url_prefix=url_prefix,
-            hostname=hostname,
-            **kwargs
-        )
+        super().__init__(app, name, import_name, url_prefix=url_prefix, hostname=hostname, **kwargs)
         self._cache = RamCache()
         self.title = title
         self.description = description
@@ -81,14 +76,14 @@ class OpenAPIModule(AppModule):
             name="schema_json",
             methods="get",
             pipeline=[JSONServicePipe()],
-            cache=RouteCacheRule(self._cache) if not bool(self.app.debug) else None
+            cache=RouteCacheRule(self._cache) if not bool(self.app.debug) else None,
         )(self._get_spec)
         self.route(
             "/openapi.yaml",
             name="schema_yaml",
             methods="get",
             pipeline=[YAMLPipe()],
-            cache=RouteCacheRule(self._cache) if not bool(self.app.debug) else None
+            cache=RouteCacheRule(self._cache) if not bool(self.app.debug) else None,
         )(self._get_spec)
         if expose_ui:
             self.route(
@@ -96,7 +91,7 @@ class OpenAPIModule(AppModule):
                 name="ui",
                 methods="get",
                 output="str",
-                cache=RouteCacheRule(self._cache) if not bool(self.app.debug) else None
+                cache=RouteCacheRule(self._cache) if not bool(self.app.debug) else None,
             )(self._ui_stoplight)
 
     async def _get_spec(self):
@@ -112,7 +107,7 @@ class OpenAPIModule(AppModule):
             terms_of_service=self.terms_of_service,
             contact=self.contact,
             license_info=self.license_info,
-            security_schemes=self.security_schemes
+            security_schemes=self.security_schemes,
         )
 
     @cachedprop
@@ -126,7 +121,7 @@ class OpenAPIModule(AppModule):
             file_path="__emmett_rest__/openapi/description.md",
             context={
                 "title": self.title,
-            }
+            },
         )
 
     async def _ui_stoplight(self):
@@ -134,10 +129,7 @@ class OpenAPIModule(AppModule):
         return self.app.templater._render(
             self._stoplight_template,
             file_path="__emmett_rest__/openapi/stoplight.html",
-            context={
-                "title": self.title,
-                "openapi_url": url(f"{self.name}.schema_yaml")
-            }
+            context={"title": self.title, "openapi_url": url(f"{self.name}.schema_yaml")},
         )
 
     def regroup(self, module_name: str, destination: str):
