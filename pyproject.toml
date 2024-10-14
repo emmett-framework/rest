@@ -1,16 +1,18 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
 [project]
 name = "emmett-rest"
-
-[tool.poetry]
-name = "emmett-rest"
-version = "1.5.2"
+version = "1.6.0"
 description = "REST extension for Emmett framework"
-authors = ["Giovanni Barillari <gi0baro@d4net.org>"]
-license = "BSD-3-Clause"
-
 readme = "README.md"
-homepage = "https://github.com/emmett-framework/rest"
-repository = "https://github.com/emmett-framework/rest"
+license = "BSD-3-Clause"
+requires-python = ">=3.8"
+
+authors = [
+    { name = "Giovanni Barillari", email = "g@baro.dev" }
+]
 
 keywords = ["rest", "web", "emmett"]
 classifiers = [
@@ -25,32 +27,78 @@ classifiers = [
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Internet :: WWW/HTTP :: Dynamic Content",
     "Topic :: Software Development :: Libraries :: Python Modules"
 ]
 
-packages = [
-    {include = "emmett_rest/**/*.*", format = "sdist"},
-    {include = "tests", format = "sdist"}
+dependencies = [
+    "emmett~=2.6",
+    "pydantic~=1.9",
 ]
+
+[project.urls]
+Homepage = 'https://github.com/emmett-framework/rest'
+Funding = 'https://github.com/sponsors/gi0baro'
+Source = 'https://github.com/emmett-framework/rest'
+Issues = 'https://github.com/emmett-framework/rest/issues'
+
+[tool.hatch.build.targets.sdist]
 include = [
-    "CHANGES.md",
-    "LICENSE"
+    '/README.md',
+    '/CHANGES.md',
+    '/LICENSE',
+    '/emmett_rest',
+    '/tests',
 ]
 
-[tool.poetry.dependencies]
-python = "^3.8"
-emmett = "^2.5"
-pydantic = "^1.9.0"
+[tool.ruff]
+line-length = 120
 
-[tool.poetry.dev-dependencies]
-pytest = "^6.2"
-pytest-asyncio = "^0.15"
-psycopg2-binary = "~2.9.5"
+[tool.ruff.format]
+quote-style = 'double'
 
-[tool.poetry.urls]
-"Issue Tracker" = "https://github.com/emmett-framework/rest/issues"
+[tool.ruff.lint]
+extend-select = [
+    # E and F are enabled by default
+    'B',      # flake8-bugbear
+    'C4',     # flake8-comprehensions
+    'C90',    # mccabe
+    'I',      # isort
+    'N',      # pep8-naming
+    'Q',      # flake8-quotes
+    'RUF100', # ruff (unused noqa)
+    'S',      # flake8-bandit
+    'W',      # pycodestyle
+]
+extend-ignore = [
+    'B006', # mutable function args are fine
+    'B904', # rising without from is fine
+    'E731', # assigning lambdas is fine
+    'N815', # leave to us var naming
+    'S101', # assert is fine
+    'S110', # pass on exceptions is fine
+]
+mccabe = { max-complexity = 44 }
 
-[build-system]
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"
+[tool.ruff.lint.isort]
+combine-as-imports = true
+lines-after-imports = 2
+known-first-party = ['emmett_rest', 'tests']
+
+[tool.ruff.lint.per-file-ignores]
+'emmett_rest/__init__.py' = ['F401']
+'emmett_rest/openapi/__init__.py' = ['F401']
+'emmett_rest/queries/__init__.py' = ['F401']
+
+[tool.pytest.ini_options]
+asyncio_mode = 'auto'
+
+[tool.uv]
+dev-dependencies = [
+    "ruff~=0.5.0",
+    "pytest>=7.1",
+    "pytest-asyncio>=0.15",
+    "psycopg2-binary~=2.9",
+]

@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 """
-    emmett_rest.wrappers
-    --------------------
+emmett_rest.wrappers
+--------------------
 
-    Provides wrappers for the REST extension
+Provides wrappers for the REST extension
 
-    :copyright: 2017 Giovanni Barillari
-    :license: BSD-3-Clause
+:copyright: 2017 Giovanni Barillari
+:license: BSD-3-Clause
 """
 
 from functools import wraps
@@ -43,7 +43,7 @@ def wrap_module_from_app(ext: Extension) -> Callable[..., RESTModule]:
         url_prefix: Optional[str] = None,
         hostname: Optional[str] = None,
         module_class: Optional[Type[RESTModule]] = None,
-        **kwargs: Any
+        **kwargs: Any,
     ) -> RESTModule:
         module_class = module_class or ext.config.default_module_class
         return module_class.from_app(
@@ -68,8 +68,9 @@ def wrap_module_from_app(ext: Extension) -> Callable[..., RESTModule]:
             id_path=id_path,
             url_prefix=url_prefix,
             hostname=hostname,
-            opts=kwargs
+            opts=kwargs,
         )
+
     return rest_module_from_app
 
 
@@ -97,7 +98,7 @@ def wrap_module_from_module(ext: Extension) -> Callable[..., RESTModule]:
         url_prefix: Optional[str] = None,
         hostname: Optional[str] = None,
         module_class: Optional[Type[RESTModule]] = None,
-        **kwargs: Any
+        **kwargs: Any,
     ) -> RESTModule:
         module_class = module_class or ext.config.default_module_class
         return module_class.from_module(
@@ -123,8 +124,9 @@ def wrap_module_from_module(ext: Extension) -> Callable[..., RESTModule]:
             id_path=id_path,
             url_prefix=url_prefix,
             hostname=hostname,
-            opts=kwargs
+            opts=kwargs,
         )
+
     return rest_module_from_module
 
 
@@ -152,7 +154,7 @@ def wrap_module_from_modulegroup(ext: Extension) -> Callable[..., RESTModule]:
         url_prefix: Optional[str] = None,
         hostname: Optional[str] = None,
         module_class: Optional[Type[RESTModule]] = None,
-        **kwargs: Any
+        **kwargs: Any,
     ) -> RESTModulesGrouped:
         module_class = module_class or ext.config.default_module_class
         mods = []
@@ -180,10 +182,11 @@ def wrap_module_from_modulegroup(ext: Extension) -> Callable[..., RESTModule]:
                 id_path=id_path,
                 url_prefix=url_prefix,
                 hostname=hostname,
-                opts=kwargs
+                opts=kwargs,
             )
             mods.append(mod)
         return RESTModulesGrouped(*mods)
+
     return rest_module_from_modulegroup
 
 
@@ -191,4 +194,5 @@ def wrap_method_on_obj(method, obj):
     @wraps(method)
     def wrapped(*args, **kwargs):
         return method(obj, *args, **kwargs)
+
     return wrapped

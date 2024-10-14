@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 """
-    emmett_rest.parsers
-    -------------------
+emmett_rest.parsers
+-------------------
 
-    Provides REST de-serialization tools
+Provides REST de-serialization tools
 
-    :copyright: 2017 Giovanni Barillari
-    :license: BSD-3-Clause
+:copyright: 2017 Giovanni Barillari
+:license: BSD-3-Clause
 """
 
 from collections import OrderedDict
@@ -17,7 +17,7 @@ from emmett.utils import cachedprop
 
 
 class VParserDefinition:
-    __slots__ = ['param', 'f']
+    __slots__ = ["param", "f"]
 
     def __init__(self, param):
         self.param = param
@@ -28,7 +28,7 @@ class VParserDefinition:
 
 
 class ProcParserDefinition:
-    __slots__ = ['f', '_inst_count_']
+    __slots__ = ["f", "_inst_count_"]
     _all_inst_count_ = 0
 
     def __init__(self):
@@ -58,9 +58,9 @@ class MetaParser(type):
         new_class._declared_vparsers_ = declared_vparsers
         new_class._declared_procs_ = declared_procs
         for base in reversed(new_class.__mro__[1:]):
-            if hasattr(base, '_declared_vparsers_'):
+            if hasattr(base, "_declared_vparsers_"):
                 all_vparsers.update(base._declared_vparsers_)
-            if hasattr(base, '_declared_procs_'):
+            if hasattr(base, "_declared_procs_"):
                 all_procs.update(base._declared_procs_)
         all_vparsers.update(declared_vparsers)
         all_procs.update(declared_procs)
@@ -97,7 +97,7 @@ class Parser(metaclass=MetaParser):
             writable_map = {}
             for fieldname in self._model.table.fields:
                 writable_map[fieldname] = self._model.table[fieldname].writable
-            if hasattr(self._model, 'rest_rw'):
+            if hasattr(self._model, "rest_rw"):
                 self.attributes = []
                 for key, value in self._model.rest_rw.items():
                     if isinstance(value, tuple):
@@ -113,11 +113,8 @@ class Parser(metaclass=MetaParser):
                 if el in self.attributes:
                     self.attributes.remove(el)
         _attrs_override_ = []
-        for key in (
-            set(dir(self)) - set(self._all_vparsers_.keys()) -
-            set(self._all_procs_.keys())
-        ):
-            if not key.startswith('_') and callable(getattr(self, key)):
+        for key in set(dir(self)) - set(self._all_vparsers_.keys()) - set(self._all_procs_.keys()):
+            if not key.startswith("_") and callable(getattr(self, key)):
                 _attrs_override_.append(key)
         self._attrs_override_ = _attrs_override_
         self._init()
@@ -162,7 +159,5 @@ def parse_params_with_parser(parser_instance, **extras):
 
 
 async def parse_params(*accepted_params, **kwargs):
-    params = _envelope_filter(
-        await request.body_params, kwargs.get('envelope')
-    )
+    params = _envelope_filter(await request.body_params, kwargs.get("envelope"))
     return _parse(set(accepted_params), params)

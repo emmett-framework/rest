@@ -1,18 +1,17 @@
 # -*- coding: utf-8 -*-
 """
-    emmett_rest.rest
-    ----------------
+emmett_rest.rest
+----------------
 
-    Provides main REST logics
+Provides main REST logics
 
-    :copyright: 2017 Giovanni Barillari
-    :license: BSD-3-Clause
+:copyright: 2017 Giovanni Barillari
+:license: BSD-3-Clause
 """
 
 from __future__ import annotations
 
 import operator
-
 from functools import reduce
 from typing import Any, Callable, Dict, List, Optional, Union
 
@@ -24,28 +23,16 @@ from emmett.pipeline import Pipe
 from emmett.routing.router import RoutingCtxGroup
 from emmett.tools.service import JSONServicePipe
 
+from .helpers import FieldPipe, FieldsPipe, RecordFetcher, RESTRoutingCtx, SetFetcher
 from .openapi.api import ModuleOpenAPI
-from .helpers import RecordFetcher, SetFetcher, FieldPipe, FieldsPipe, RESTRoutingCtx
-from .parsers import (
-    parse_params as _parse_params,
-    parse_params_with_parser as _parse_params_wparser
-)
+from .parsers import parse_params as _parse_params, parse_params_with_parser as _parse_params_wparser
 from .queries import JSONQueryPipe
 from .serializers import serialize as _serialize
 from .typing import ModelType, ParserType, SerializerType
 
 
 class RESTModule(AppModule):
-    _all_methods = {
-        'index',
-        'create',
-        'read',
-        'update',
-        'delete',
-        'group',
-        'stats',
-        'sample'
-    }
+    _all_methods = {"index", "create", "read", "update", "delete", "group", "stats", "sample"}
 
     @classmethod
     def from_app(
@@ -71,7 +58,7 @@ class RESTModule(AppModule):
         id_path: Optional[str] = None,
         url_prefix: Optional[str] = None,
         hostname: Optional[str] = None,
-        opts: Dict[str, Any] = {}
+        opts: Dict[str, Any] = {},
     ) -> RESTModule:
         return cls(
             ext,
@@ -95,7 +82,7 @@ class RESTModule(AppModule):
             id_path=id_path,
             url_prefix=url_prefix,
             hostname=hostname,
-            **opts
+            **opts,
         )
 
     @classmethod
@@ -123,17 +110,14 @@ class RESTModule(AppModule):
         id_path: Optional[str] = None,
         url_prefix: Optional[str] = None,
         hostname: Optional[str] = None,
-        opts: Dict[str, Any] = {}
+        opts: Dict[str, Any] = {},
     ) -> RESTModule:
-        if '.' in name:
-            raise RuntimeError(
-                "Nested app modules' names should not contains dots"
-            )
-        name = mod.name + '.' + name
-        if url_prefix and not url_prefix.startswith('/'):
-            url_prefix = '/' + url_prefix
-        module_url_prefix = (mod.url_prefix + (url_prefix or '')) \
-            if mod.url_prefix else url_prefix
+        if "." in name:
+            raise RuntimeError("Nested app modules' names should not contains dots")
+        name = mod.name + "." + name
+        if url_prefix and not url_prefix.startswith("/"):
+            url_prefix = "/" + url_prefix
+        module_url_prefix = (mod.url_prefix + (url_prefix or "")) if mod.url_prefix else url_prefix
         hostname = hostname or mod.hostname
         return cls(
             ext,
@@ -158,7 +142,7 @@ class RESTModule(AppModule):
             url_prefix=module_url_prefix,
             hostname=hostname,
             pipeline=mod.pipeline,
-            **opts
+            **opts,
         )
 
     def __init__(
@@ -185,7 +169,7 @@ class RESTModule(AppModule):
         url_prefix: Optional[str] = None,
         hostname: Optional[str] = None,
         pipeline: List[Pipe] = [],
-        **kwargs: Any
+        **kwargs: Any,
     ):
         if len(model._instance_()._fieldset_pk) > 1:
             raise RuntimeError("Emmett-REST doesn't support multiple PKs models")
@@ -206,9 +190,7 @@ class RESTModule(AppModule):
         #: service pipe injection
         add_service_pipe = True
         super_pipeline = list(pipeline)
-        if any(
-            isinstance(pipe, JSONServicePipe) for pipe in ext.app.pipeline
-        ) or any(
+        if any(isinstance(pipe, JSONServicePipe) for pipe in ext.app.pipeline) or any(
             isinstance(pipe, JSONServicePipe) for pipe in super_pipeline
         ):
             add_service_pipe = False
@@ -216,104 +198,53 @@ class RESTModule(AppModule):
             super_pipeline.insert(0, JSONServicePipe())
         #: initialize
         super().__init__(
-            ext.app,
-            name,
-            import_name,
-            url_prefix=url_prefix,
-            hostname=hostname,
-            pipeline=super_pipeline,
-            **kwargs
+            ext.app, name, import_name, url_prefix=url_prefix, hostname=hostname, pipeline=super_pipeline, **kwargs
         )
         self.ext = ext
         self._pagination = sdict()
-        for key in (
-            'page_param', 'pagesize_param',
-            'min_pagesize', 'max_pagesize', 'default_pagesize'
-        ):
+        for key in ("page_param", "pagesize_param", "min_pagesize", "max_pagesize", "default_pagesize"):
             self._pagination[key] = self.ext.config[key]
         self._sort_param = self.ext.config.sort_param
-        self.default_sort = (
-            default_sort or
-            self.ext.config.default_sort or
-            model.table._id.name
-        )
+        self.default_sort = default_sort or self.ext.config.default_sort or model.table._id.name
         self._path_base = base_path or self.ext.config.base_path
         self._path_rid = id_path or self.ext.config.id_path
-        self._serializer_class = serializer or \
-            self.ext.config.default_serializer
+        self._serializer_class = serializer or self.ext.config.default_serializer
         self._parser_class = parser or self.ext.config.default_parser
         self._parsing_params_kwargs = {}
         self.model = model
-        self.use_save = (
-            use_save if use_save is not None else
-            self.ext.config.use_save
-        )
-        self.use_destroy = (
-            use_destroy if use_destroy is not None else
-            self.ext.config.use_destroy
-        )
+        self.use_save = use_save if use_save is not None else self.ext.config.use_save
+        self.use_destroy = use_destroy if use_destroy is not None else self.ext.config.use_destroy
         self.serializer = self._serializer_class(self.model)
         self.parser = self._parser_class(self.model)
-        self.enabled_methods = list(self._all_methods & set(
-            list(
-                enabled_methods if enabled_methods is not None else
-                self.ext.config.default_enabled_methods
-            )
-        ))
-        self.disabled_methods = list(self._all_methods & set(
-            list(
-                disabled_methods if disabled_methods is not None else
-                self.ext.config.default_disabled_methods
-            )
-        ))
+        self.enabled_methods = list(
+            self._all_methods
+            & set(enabled_methods if enabled_methods is not None else self.ext.config.default_enabled_methods)
+        )
+        self.disabled_methods = list(
+            self._all_methods
+            & set(disabled_methods if disabled_methods is not None else self.ext.config.default_disabled_methods)
+        )
         self.list_envelope = list_envelope or self.ext.config.list_envelope
-        self.single_envelope = (
-            single_envelope if single_envelope is not None else
-            self.ext.config.single_envelope
-        )
-        self.meta_envelope = (
-            meta_envelope if meta_envelope is not None else
-            self.ext.config.meta_envelope
-        )
-        self.groups_envelope = (
-            groups_envelope if groups_envelope is not None else
-            self.ext.config.groups_envelope
-        )
+        self.single_envelope = single_envelope if single_envelope is not None else self.ext.config.single_envelope
+        self.meta_envelope = meta_envelope if meta_envelope is not None else self.ext.config.meta_envelope
+        self.groups_envelope = groups_envelope if groups_envelope is not None else self.ext.config.groups_envelope
         self.use_envelope_on_parse = (
-            use_envelope_on_parse if use_envelope_on_parse is not None else
-            self.ext.config.use_envelope_on_parse
+            use_envelope_on_parse if use_envelope_on_parse is not None else self.ext.config.use_envelope_on_parse
         )
-        self.serialize_meta = (
-            serialize_meta if serialize_meta is not None else
-            self.ext.config.serialize_meta
-        )
+        self.serialize_meta = serialize_meta if serialize_meta is not None else self.ext.config.serialize_meta
         self._queryable_fields = []
         self._sortable_fields = []
         self._sortable_dict = {}
         self._groupable_fields = []
         self._statsable_fields = []
         self._json_query_pipe = JSONQueryPipe(self)
-        self._group_field_pipe = FieldPipe(self, '_groupable_fields')
-        self._stats_field_pipe = FieldsPipe(self, '_statsable_fields')
+        self._group_field_pipe = FieldPipe(self, "_groupable_fields")
+        self._stats_field_pipe = FieldsPipe(self, "_statsable_fields")
         self.allowed_sorts = [self.default_sort]
         self._openapi_specs = {
-            'serializers': {
-                key: self.serializer for key in [
-                    'index',
-                    'create',
-                    'read',
-                    'update',
-                    'delete',
-                    'sample'
-                ]
-            },
-            'parsers': {
-                key: self.parser for key in [
-                    'create',
-                    'update'
-                ]
-            },
-            'additional_routes': []
+            "serializers": {key: self.serializer for key in ["index", "create", "read", "update", "delete", "sample"]},
+            "parsers": {key: self.parser for key in ["create", "update"]},
+            "additional_routes": [],
         }
         self.openapi = ModuleOpenAPI(self)
         self._init_pipelines()
@@ -328,39 +259,27 @@ class RESTModule(AppModule):
         self.read_pipeline = [SetFetcher(self), RecordFetcher(self)]
         self.update_pipeline = [SetFetcher(self)]
         self.delete_pipeline = [SetFetcher(self)]
-        self.group_pipeline = [
-            self._group_field_pipe,
-            SetFetcher(self),
-            self._json_query_pipe
-        ]
-        self.stats_pipeline = [
-            self._stats_field_pipe,
-            SetFetcher(self),
-            self._json_query_pipe
-        ]
+        self.group_pipeline = [self._group_field_pipe, SetFetcher(self), self._json_query_pipe]
+        self.stats_pipeline = [self._stats_field_pipe, SetFetcher(self), self._json_query_pipe]
         self.sample_pipeline = [SetFetcher(self), self._json_query_pipe]
 
     def init(self):
         pass
 
     def _after_initialize(self):
-        self.list_envelope = self.list_envelope or 'data'
+        self.list_envelope = self.list_envelope or "data"
         #: adjust single row serialization based on envelope
         self.serialize_many = (
-            self.serialize_with_list_envelope_and_meta if self.serialize_meta
-            else self.serialize_with_list_envelope
+            self.serialize_with_list_envelope_and_meta if self.serialize_meta else self.serialize_with_list_envelope
         )
         if self.single_envelope:
             self.serialize_one = self.serialize_with_single_envelope
             if self.use_envelope_on_parse:
                 self.parser.envelope = self.single_envelope
-                self._parsing_params_kwargs = {'envelope': self.single_envelope}
+                self._parsing_params_kwargs = {"envelope": self.single_envelope}
         else:
             self.serialize_one = self.serialize
-        self.pack_data = (
-            self.pack_with_list_envelope_and_meta if self.serialize_meta
-            else self.pack_with_list_envelope
-        )
+        self.pack_data = self.pack_with_list_envelope_and_meta if self.serialize_meta else self.pack_with_list_envelope
         #: adjust enabled methods
         for method_name in self.disabled_methods:
             self.enabled_methods.remove(method_name)
@@ -368,42 +287,27 @@ class RESTModule(AppModule):
         self._expose_routes()
 
     def route(
-        self,
-        paths: Optional[Union[str, List[str]]] = None,
-        name: Optional[str] = None,
-        **kwargs
+        self, paths: Optional[Union[str, List[str]]] = None, name: Optional[str] = None, **kwargs
     ) -> RESTRoutingCtx:
         rv = super().route(paths, name, **kwargs)
         return RESTRoutingCtx(self, rv)
 
     def _expose_routes(self):
-        path_base_trail = (
-            self._path_base.endswith('/') and self._path_base or
-            f'{self._path_base}/'
-        )
+        path_base_trail = self._path_base.endswith("/") and self._path_base or f"{self._path_base}/"
         self._methods_map = {
-            'index': (self._path_base, 'get'),
-            'read': (self._path_rid, 'get'),
-            'create': (self._path_base, 'post'),
-            'update': (self._path_rid, ['put', 'patch']),
-            'delete': (self._path_rid, 'delete'),
-            'group': (f'{path_base_trail}group/<str:field>', 'get'),
-            'stats': (f'{path_base_trail}stats', 'get'),
-            'sample': (f'{path_base_trail}sample', 'get')
+            "index": (self._path_base, "get"),
+            "read": (self._path_rid, "get"),
+            "create": (self._path_base, "post"),
+            "update": (self._path_rid, ["put", "patch"]),
+            "delete": (self._path_rid, "delete"),
+            "group": (f"{path_base_trail}group/<str:field>", "get"),
+            "stats": (f"{path_base_trail}stats", "get"),
+            "sample": (f"{path_base_trail}sample", "get"),
         }
         self._functions_map = {
-            **{
-                key: f'_{key}'
-                for key in self._all_methods - {'create', 'update', 'delete'}
-            },
-            **{
-                key: f'_{key}_without_save' if not self.use_save else f'_{key}'
-                for key in {'create', 'update'}
-            },
-            **{
-                key: f'_{key}_without_destroy' if not self.use_destroy else f'_{key}'
-                for key in {'delete'}
-            }
+            **{key: f"_{key}" for key in self._all_methods - {"create", "update", "delete"}},
+            **{key: f"_{key}_without_save" if not self.use_save else f"_{key}" for key in {"create", "update"}},
+            **{key: f"_{key}_without_destroy" if not self.use_destroy else f"_{key}" for key in {"delete"}},
         }
         for key in self.enabled_methods:
             path, methods = self._methods_map[key]
@@ -424,62 +328,49 @@ class RESTModule(AppModule):
         except Exception:
             page = 1
         try:
-            page_size = int(
-                request.query_params[self._pagination.pagesize_param] or 20)
-            assert (
-                self._pagination.min_pagesize <= page_size <=
-                self._pagination.max_pagesize)
+            page_size = int(request.query_params[self._pagination.pagesize_param] or 20)
+            assert self._pagination.min_pagesize <= page_size <= self._pagination.max_pagesize
         except Exception:
             page_size = self._pagination.default_pagesize
         return page, page_size
 
     def get_sort(self, default=None, allowed_fields=None):
         default = default or self.default_sort
-        pfields = (
-            (
-                isinstance(request.query_params.sort_by, str) and
-                request.query_params.sort_by
-            ) or default
-        ).split(',')
+        pfields = ((isinstance(request.query_params.sort_by, str) and request.query_params.sort_by) or default).split(
+            ","
+        )
         rv = []
         allowed_fields = allowed_fields or self._sortable_dict
         for pfield in pfields:
             asc = True
-            if pfield.startswith('-'):
+            if pfield.startswith("-"):
                 pfield = pfield[1:]
                 asc = False
             field = allowed_fields.get(pfield)
             if not field:
                 continue
             rv.append(field if asc else ~field)
-        return reduce(
-            lambda a, b: operator.or_(a, b) if a and b else None,
-            rv
-        ) if rv else allowed_fields.get(default)
+        return reduce(lambda a, b: operator.or_(a, b) if a and b else None, rv) if rv else allowed_fields.get(default)
 
     def build_error_400(self, errors=None):
         if errors:
-            return {'errors': errors}
-        return {'errors': {'request': 'bad request'}}
+            return {"errors": errors}
+        return {"errors": {"request": "bad request"}}
 
     def build_error_404(self):
-        return {'errors': {'id': 'record not found'}}
+        return {"errors": {"id": "record not found"}}
 
     def build_error_422(self, errors=None, to_dict=True):
         if errors:
             if to_dict and hasattr(errors, "as_dict"):
                 errors = errors.as_dict()
-            return {'errors': errors}
-        return {'errors': {'request': 'unprocessable entity'}}
+            return {"errors": errors}
+        return {"errors": {"request": "unprocessable entity"}}
 
     def _build_meta(self, dbset, pagination, **kwargs):
-        count = kwargs.get('count', dbset.count())
+        count = kwargs.get("count", dbset.count())
         page, page_size = pagination
-        return {
-            'object': 'list',
-            'has_more': count > (page * page_size),
-            'total_objects': count
-        }
+        return {"object": "list", "has_more": count > (page * page_size), "total_objects": count}
 
     def serialize(self, data, **extras):
         return _serialize(data, self.serializer, **extras)
@@ -487,13 +378,11 @@ class RESTModule(AppModule):
     def serialize_with_list_envelope(self, data, dbset, pagination, **extras):
         return {self.list_envelope: self.serialize(data, **extras)}
 
-    def serialize_with_list_envelope_and_meta(
-        self, data, dbset, pagination, **extras
-    ):
-        mextras = extras.pop('meta_extras', {})
+    def serialize_with_list_envelope_and_meta(self, data, dbset, pagination, **extras):
+        mextras = extras.pop("meta_extras", {})
         return {
             self.list_envelope: self.serialize(data, **extras),
-            self.meta_envelope: self.build_meta(dbset, pagination, **mextras)
+            self.meta_envelope: self.build_meta(dbset, pagination, **mextras),
         }
 
     def serialize_with_single_envelope(self, data, **extras):
@@ -506,11 +395,8 @@ class RESTModule(AppModule):
         count = len(data)
         return {
             envelope: data,
-            self.meta_envelope: self.build_meta(
-                sdict(count=lambda c=count: c),
-                (1, count)
-            ),
-            **extras
+            self.meta_envelope: self.build_meta(sdict(count=lambda c=count: c), (1, count)),
+            **extras,
         }
 
     async def parse_params(self, *params):
@@ -611,43 +497,27 @@ class RESTModule(AppModule):
     #: additional routes
     async def _group(self, dbset, field):
         count_field = self.model.table._id.count()
-        sort = self.get_sort(
-            default='count',
-            allowed_fields={'count': count_field}
-        )
+        sort = self.get_sort(default="count", allowed_fields={"count": count_field})
         data = [
-            {
-                'value': row[self.model.table][field.name],
-                'count': row[count_field]
-            } for row in dbset.select(
-                field, count_field, groupby=field, orderby=sort
-            )
+            {"value": row[self.model.table][field.name], "count": row[count_field]}
+            for row in dbset.select(field, count_field, groupby=field, orderby=sort)
         ]
         return self.pack_data(self.groups_envelope, data)
 
     async def _stats(self, dbset, fields):
         grouped_fields, select_fields, rv = {}, [], {}
         for field in fields:
-            grouped_fields[field.name] = {
-                'min': field.min(),
-                'max': field.max(),
-                'avg': field.avg()
-            }
+            grouped_fields[field.name] = {"min": field.min(), "max": field.max(), "avg": field.avg()}
             select_fields.extend(grouped_fields[field.name].values())
         row = dbset.select(*select_fields).first()
         for key, attrs in grouped_fields.items():
-            rv[key] = {
-                attr_key: row[field] for attr_key, field in attrs.items()
-            }
+            rv[key] = {attr_key: row[field] for attr_key, field in attrs.items()}
         return rv
 
     async def _sample(self, dbset):
         _, page_size = self.get_pagination()
-        rows = dbset.select(paginate=(1, page_size), orderby='<random>')
-        return self.serialize_many(
-            rows, dbset, (1, page_size),
-            meta_extras={'count': len(rows)}
-        )
+        rows = dbset.select(paginate=(1, page_size), orderby="<random>")
+        return self.serialize_many(rows, dbset, (1, page_size), meta_extras={"count": len(rows)})
 
     #: properties
     @property
@@ -657,9 +527,7 @@ class RESTModule(AppModule):
     @allowed_sorts.setter
     def allowed_sorts(self, val: List[str]):
         self._sortable_fields = val
-        self._sortable_dict = {
-            field: self.model.table[field] for field in self._sortable_fields
-        }
+        self._sortable_dict = {field: self.model.table[field] for field in self._sortable_fields}
 
     @property
     def query_allowed_fields(self) -> List[str]:
@@ -689,38 +557,23 @@ class RESTModule(AppModule):
         self._stats_field_pipe.set_accepted()
 
     #: decorators
-    def get_dbset(
-        self,
-        f: Callable[[RESTModule], DBSet]
-    ) -> Callable[[RESTModule], DBSet]:
+    def get_dbset(self, f: Callable[[RESTModule], DBSet]) -> Callable[[RESTModule], DBSet]:
         self._fetcher_method = f
         return f
 
-    def get_row(
-        self,
-        f: Callable[[DBSet], Optional[Row]]
-    ) -> Callable[[DBSet], Optional[Row]]:
+    def get_row(self, f: Callable[[DBSet], Optional[Row]]) -> Callable[[DBSet], Optional[Row]]:
         self._select_method = f
         return f
 
-    def before_create(
-        self,
-        f: Callable[[sdict], None]
-    ) -> Callable[[sdict], None]:
+    def before_create(self, f: Callable[[sdict], None]) -> Callable[[sdict], None]:
         self._before_create_callbacks.append(f)
         return f
 
-    def before_update(
-        self,
-        f: Callable[[int, sdict], None]
-    ) -> Callable[[int, sdict], None]:
+    def before_update(self, f: Callable[[int, sdict], None]) -> Callable[[int, sdict], None]:
         self._before_update_callbacks.append(f)
         return f
 
-    def after_parse_params(
-        self,
-        f: Callable[[sdict], None]
-    ) -> Callable[[sdict], None]:
+    def after_parse_params(self, f: Callable[[sdict], None]) -> Callable[[sdict], None]:
         self._after_params_callbacks.append(f)
         return f
 
@@ -738,34 +591,23 @@ class RESTModule(AppModule):
 
     def index(self, pipeline=[]):
         pipeline = self.index_pipeline + pipeline
-        return self.route(
-            self._path_base, pipeline=pipeline, methods='get', name='index'
-        )
+        return self.route(self._path_base, pipeline=pipeline, methods="get", name="index")
 
     def read(self, pipeline=[]):
         pipeline = self.read_pipeline + pipeline
-        return self.route(
-            self._path_rid, pipeline=pipeline, methods='get', name='read'
-        )
+        return self.route(self._path_rid, pipeline=pipeline, methods="get", name="read")
 
     def create(self, pipeline=[]):
         pipeline = self.create_pipeline + pipeline
-        return self.route(
-            self._path_base, pipeline=pipeline, methods='post', name='create'
-        )
+        return self.route(self._path_base, pipeline=pipeline, methods="post", name="create")
 
     def update(self, pipeline=[]):
         pipeline = self.update_pipeline + pipeline
-        return self.route(
-            self._path_rid, pipeline=pipeline, methods=['put', 'patch'],
-            name='update'
-        )
+        return self.route(self._path_rid, pipeline=pipeline, methods=["put", "patch"], name="update")
 
     def delete(self, pipeline=[]):
         pipeline = self.delete_pipeline + pipeline
-        return self.route(
-            self._path_rid, pipeline=pipeline, methods='delete', name='delete'
-        )
+        return self.route(self._path_rid, pipeline=pipeline, methods="delete", name="delete")
 
     def on_400(self, f):
         self.error_400 = f
@@ -793,9 +635,7 @@ class RESTModulesGrouped(AppModulesGrouped):
     def allowed_sorts(self, val: List[str]):
         for module in self.modules:
             module._sortable_fields = val
-            module._sortable_dict = {
-                field: module.model.table[field] for field in module._sortable_fields
-            }
+            module._sortable_dict = {field: module.model.table[field] for field in module._sortable_fields}
 
     @property
     def query_allowed_fields(self) -> List[str]:
@@ -827,42 +667,27 @@ class RESTModulesGrouped(AppModulesGrouped):
             module._statsable_fields = val
             module._stats_field_pipe.set_accepted()
 
-    def get_dbset(
-        self,
-        f: Callable[[RESTModule], DBSet]
-    ) -> Callable[[RESTModule], DBSet]:
+    def get_dbset(self, f: Callable[[RESTModule], DBSet]) -> Callable[[RESTModule], DBSet]:
         for module in self.modules:
             module._fetcher_method = f
         return f
 
-    def get_row(
-        self,
-        f: Callable[[DBSet], Optional[Row]]
-    ) -> Callable[[DBSet], Optional[Row]]:
+    def get_row(self, f: Callable[[DBSet], Optional[Row]]) -> Callable[[DBSet], Optional[Row]]:
         for module in self.modules:
             module._select_method = f
         return f
 
-    def before_create(
-        self,
-        f: Callable[[sdict], None]
-    ) -> Callable[[sdict], None]:
+    def before_create(self, f: Callable[[sdict], None]) -> Callable[[sdict], None]:
         for module in self.modules:
             module._before_create_callbacks.append(f)
         return f
 
-    def before_update(
-        self,
-        f: Callable[[int, sdict], None]
-    ) -> Callable[[int, sdict], None]:
+    def before_update(self, f: Callable[[int, sdict], None]) -> Callable[[int, sdict], None]:
         for module in self.modules:
             module._before_update_callbacks.append(f)
         return f
 
-    def after_parse_params(
-        self,
-        f: Callable[[sdict], None]
-    ) -> Callable[[sdict], None]:
+    def after_parse_params(self, f: Callable[[sdict], None]) -> Callable[[sdict], None]:
         for module in self.modules:
             module._after_params_callbacks.append(f)
         return f
@@ -886,42 +711,21 @@ class RESTModulesGrouped(AppModulesGrouped):
         routes = []
         for module in self.modules:
             route_pipeline = module.index_pipeline + pipeline
-            routes.append(
-                module.route(
-                    module._path_base,
-                    pipeline=route_pipeline,
-                    methods='get',
-                    name='index'
-                )
-            )
+            routes.append(module.route(module._path_base, pipeline=route_pipeline, methods="get", name="index"))
         return RoutingCtxGroup(routes)
 
     def read(self, pipeline=[]):
         routes = []
         for module in self.modules:
             route_pipeline = module.read_pipeline + pipeline
-            routes.append(
-                module.route(
-                    module._path_rid,
-                    pipeline=route_pipeline,
-                    methods='get',
-                    name='read'
-                )
-            )
+            routes.append(module.route(module._path_rid, pipeline=route_pipeline, methods="get", name="read"))
         return RoutingCtxGroup(routes)
 
     def create(self, pipeline=[]):
         routes = []
         for module in self.modules:
             route_pipeline = module.create_pipeline + pipeline
-            routes.append(
-                module.route(
-                    module._path_base,
-                    pipeline=route_pipeline,
-                    methods='post',
-                    name='create'
-                )
-            )
+            routes.append(module.route(module._path_base, pipeline=route_pipeline, methods="post", name="create"))
         return RoutingCtxGroup(routes)
 
     def update(self, pipeline=[]):
@@ -929,12 +733,7 @@ class RESTModulesGrouped(AppModulesGrouped):
         for module in self.modules:
             route_pipeline = module.update_pipeline + pipeline
             routes.append(
-                module.route(
-                    module._path_rid,
-                    pipeline=route_pipeline,
-                    methods=['put', 'patch'],
-                    name='update'
-                )
+                module.route(module._path_rid, pipeline=route_pipeline, methods=["put", "patch"], name="update")
             )
         return RoutingCtxGroup(routes)
 
@@ -942,14 +741,7 @@ class RESTModulesGrouped(AppModulesGrouped):
         routes = []
         for module in self.modules:
             route_pipeline = module.delete_pipeline + pipeline
-            routes.append(
-                module.route(
-                    module._path_rid,
-                    pipeline=route_pipeline,
-                    methods='delete',
-                    name='delete'
-                )
-            )
+            routes.append(module.route(module._path_rid, pipeline=route_pipeline, methods="delete", name="delete"))
         return RoutingCtxGroup(routes)
 
     def on_400(self, f):

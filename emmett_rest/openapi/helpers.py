@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 """
-    emmett_rest.openapi.helpers
-    ---------------------------
+emmett_rest.openapi.helpers
+---------------------------
 
-    Provides OpenAPI internal helpers
+Provides OpenAPI internal helpers
 
-    :copyright: 2017 Giovanni Barillari
-    :license: BSD-3-Clause
+:copyright: 2017 Giovanni Barillari
+:license: BSD-3-Clause
 """
 
 from enum import Enum

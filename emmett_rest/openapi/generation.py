@@ -1,18 +1,17 @@
 # -*- coding: utf-8 -*-
 """
-    emmett_rest.openapi.generation
-    ------------------------------
+emmett_rest.openapi.generation
+------------------------------
 
-    Provides OpenAPI generation functions
+Provides OpenAPI generation functions
 
-    :copyright: 2017 Giovanni Barillari
-    :license: BSD-3-Clause
+:copyright: 2017 Giovanni Barillari
+:license: BSD-3-Clause
 """
 
 import datetime
 import decimal
 import re
-
 from collections import defaultdict
 from enum import Enum
 from typing import Any, Dict, List, Optional, Set, Tuple, Type, Union, get_type_hints
@@ -22,24 +21,18 @@ from pydantic.config import BaseConfig
 from pydantic.fields import FieldInfo, ModelField
 from pydantic.schema import field_schema, model_process_schema
 
+from ..parsers import Parser
 from ..rest import RESTModule
 from ..serializers import Serializer
-from ..parsers import Parser
 from .schemas import OpenAPI
+
 
 REF_PREFIX = "#/components/schemas/"
 
 _re_path_param = re.compile(r"<(\w+)\:(\w+)>")
 _re_path_param_optional = re.compile(r"\(([^<]+)?<(\w+)\:(\w+)>\)\?")
 _pydantic_baseconf = BaseConfig()
-_path_param_types_map = {
-    "alpha": str,
-    "any": str,
-    "date": str,
-    "float": float,
-    "int": int,
-    "str": str
-}
+_path_param_types_map = {"alpha": str, "any": str, "date": str, "float": float, "int": int, "str": str}
 _model_field_types_map = {
     "id": int,
     "string": str,
@@ -59,7 +52,7 @@ _model_field_types_map = {
     "password": str,
     "upload": str,
     "list:string": List[str],
-    "list:int": List[int]
+    "list:int": List[int],
 }
 _def_summaries = {
     "index": "List {entity}",
@@ -69,7 +62,7 @@ _def_summaries = {
     "delete": "Delete {entity}",
     "sample": "List random {entity}",
     "group": "Group {entity}",
-    "stats": "Retrieve {entity} stats"
+    "stats": "Retrieve {entity} stats",
 }
 _def_descriptions = {
     "index": "Returns a list of {entity}",
@@ -79,7 +72,7 @@ _def_descriptions = {
     "delete": "Delete specific {entity} with the given identifier",
     "sample": "Returns random selection of {entity}",
     "group": "Counts {entity} grouped by the given attribute",
-    "stats": "Returns {entity} stats for the specified attributes"
+    "stats": "Returns {entity} stats for the specified attributes",
 }
 
 
@@ -104,36 +97,11 @@ class StatModel(BaseModel):
     avg: Union[int, float]
 
 
-_error_schema = model_process_schema(
-    ErrorsModel,
-    model_name_map={},
-    ref_prefix=None
-)[0]
+_error_schema = model_process_schema(ErrorsModel, model_name_map={}, ref_prefix=None)[0]
 _def_errors = {
-    "400": {
-        "description": "Bad request",
-        "content": {
-            "application/json": {
-                "schema": _error_schema
-            }
-        }
-    },
-    "404": {
-        "description": "Resource not found",
-        "content": {
-            "application/json": {
-                "schema": _error_schema
-            }
-        }
-    },
-    "422": {
-        "description": "Unprocessable request",
-        "content": {
-            "application/json": {
-                "schema": _error_schema
-            }
-        }
-    }
+    "400": {"description": "Bad request", "content": {"application/json": {"schema": _error_schema}}},
+    "404": {"description": "Resource not found", "content": {"application/json": {"schema": _error_schema}}},
+    "422": {"description": "Unprocessable request", "content": {"application/json": {"schema": _error_schema}}},
 }
 
 
@@ -145,7 +113,7 @@ def _defs_from_item(obj: Any, key: str):
             rv.update(_defs_from_pydantic_model(obj, parent=key))
         elif issubclass(obj, Enum):
             rv[obj].append(key)
-    except:
+    except Exception:
         pass
     return rv
 
@@ -176,10 +144,7 @@ def _denormalize_schema(schema: Dict[str, Any], defs: Dict[str, Dict[str, Any]])
                 schema["anyOf"][idx] = defs[element["$ref"][14:]]
 
 
-def _index_default_query_parameters(
-    module: RESTModule,
-    sort_enabled: bool = True
-) -> List[Dict[str, Any]]:
+def _index_default_query_parameters(module: RESTModule, sort_enabled: bool = True) -> List[Dict[str, Any]]:
     rv = []
 
     model_map = {}
@@ -197,7 +162,7 @@ def _index_default_query_parameters(
             model_config=_pydantic_baseconf,
             required=False,
             default=1,
-            field_info=FieldInfo(ge=1)
+            field_info=FieldInfo(ge=1),
         ),
         ModelField(
             name=module.ext.config.pagesize_param,
@@ -207,11 +172,9 @@ def _index_default_query_parameters(
             required=False,
             default=module.ext.config.default_pagesize,
             field_info=FieldInfo(
-                description="Size of the page",
-                ge=module.ext.config.min_pagesize,
-                le=module.ext.config.max_pagesize
-            )
-        )
+                description="Size of the page", ge=module.ext.config.min_pagesize, le=module.ext.config.max_pagesize
+            ),
+        ),
     ]
 
     if sort_enabled:
@@ -229,12 +192,12 @@ def _index_default_query_parameters(
                         "Descendant sorting applied with -{parameter} notation. "
                         "Multiple values should be separated by comma."
                     )
-                )
+                ),
             )
         )
 
     if condition_fields:
-        where_model = create_model('Condition', **condition_fields)
+        where_model = create_model("Condition", **condition_fields)
         fields.append(
             ModelField(
                 name=module.ext.config.query_param,
@@ -242,29 +205,18 @@ def _index_default_query_parameters(
                 class_validators=None,
                 model_config=_pydantic_baseconf,
                 required=False,
-                field_info=FieldInfo(
-                    description=(
-                        "Filter results using the provided query object."
-                    )
-                )
+                field_info=FieldInfo(description=("Filter results using the provided query object.")),
             )
         )
-        model_map[where_model] = 'Condition'
+        model_map[where_model] = "Condition"
 
     for field in fields:
-        schema, defs, _ = field_schema(
-            field, model_name_map=model_map, ref_prefix=None
-        )
+        schema, defs, _ = field_schema(field, model_name_map=model_map, ref_prefix=None)
         if field.name in enums:
             schema["items"]["enum"] = enums[field.name]
         elif field.name == module.ext.config.query_param:
             schema["allOf"][0] = defs["Condition"]
-        rv.append({
-            "name": field.name,
-            "in": "query",
-            "required": field.required,
-            "schema": schema
-        })
+        rv.append({"name": field.name, "in": "query", "required": field.required, "schema": schema})
     return rv
 
 
@@ -275,22 +227,19 @@ def _stats_default_query_parameters(module: RESTModule) -> List[Dict[str, Any]]:
 
     fields = [
         ModelField(
-            name='fields',
+            name="fields",
             type_=List[str],
             class_validators=None,
             model_config=_pydantic_baseconf,
             required=True,
             field_info=FieldInfo(
-                description=(
-                    "Add specified attribute(s) to stats. "
-                    "Multiple values should be separated by comma."
-                )
-            )
+                description=("Add specified attribute(s) to stats. " "Multiple values should be separated by comma.")
+            ),
         )
     ]
 
     if condition_fields:
-        where_model = create_model('Condition', **condition_fields)
+        where_model = create_model("Condition", **condition_fields)
         fields.append(
             ModelField(
                 name=module.ext.config.query_param,
@@ -298,36 +247,23 @@ def _stats_default_query_parameters(module: RESTModule) -> List[Dict[str, Any]]:
                 class_validators=None,
                 model_config=_pydantic_baseconf,
                 required=False,
-                field_info=FieldInfo(
-                    description=(
-                        "Filter results using the provided query object."
-                    )
-                )
+                field_info=FieldInfo(description=("Filter results using the provided query object.")),
             )
         )
-        model_map[where_model] = 'Condition'
+        model_map[where_model] = "Condition"
 
     for field in fields:
-        schema, defs, _ = field_schema(
-            field, model_name_map=model_map, ref_prefix=None
-        )
+        schema, defs, _ = field_schema(field, model_name_map=model_map, ref_prefix=None)
         if field.name == "fields":
             schema["items"]["enum"] = module.stats_allowed_fields
         if field.name == module.ext.config.query_param:
             schema["allOf"][0] = defs["Condition"]
-        rv.append({
-            "name": field.name,
-            "in": "query",
-            "required": field.required,
-            "schema": schema
-        })
+        rv.append({"name": field.name, "in": "query", "required": field.required, "schema": schema})
     return rv
 
 
 def build_schema_from_fields(
-    module: RESTModule,
-    fields: Dict[str, Any],
-    hints_check: Optional[Set[str]] = None
+    module: RESTModule, fields: Dict[str, Any], hints_check: Optional[Set[str]] = None
 ) -> Tuple[Dict[str, Any], Type[BaseModel]]:
     hints_check = hints_check if hints_check is not None else set(fields.keys())
     schema_fields, hints_defs, fields_choices = {}, defaultdict(list), {}
@@ -345,20 +281,16 @@ def build_schema_from_fields(
         if choices:
             fields_choices[key] = choices
     for key in set(schema_fields.keys()) & hints_check:
-        for type_arg in [schema_fields[key][0]] + list(getattr(
-            schema_fields[key][0], "__args__", []
-        )):
+        for type_arg in [schema_fields[key][0]] + list(getattr(schema_fields[key][0], "__args__", [])):
             for ikey, ival in _defs_from_item(type_arg, key).items():
                 hints_defs[ikey].extend(ival)
     model = create_model(module.model.__name__, **schema_fields)
     schema, defs, nested = model_process_schema(
-        model,
-        model_name_map={key: key.__name__ for key in hints_defs.keys()},
-        ref_prefix=None
+        model, model_name_map={key: key.__name__ for key in hints_defs.keys()}, ref_prefix=None
     )
     for def_schema in defs.values():
         _denormalize_schema(def_schema, defs)
-    for key, value in schema["properties"].items():
+    for value in schema["properties"].values():
         _denormalize_schema(value, defs)
     for key, choices in fields_choices.items():
         schema["properties"][key]["enum"] = choices
@@ -398,10 +330,7 @@ class OpenAPIGenerator:
         self.security_schemes = security_schemes or {}
 
     def fields_from_model(
-        self,
-        model: Any,
-        model_fields: Dict[str, Any],
-        fields: List[str]
+        self, model: Any, model_fields: Dict[str, Any], fields: List[str]
     ) -> Dict[str, Tuple[Type, Any, List[Any]]]:
         rv = {}
         for key in fields:
@@ -418,25 +347,18 @@ class OpenAPIGenerator:
             rv[key] = (
                 _model_field_types_map.get(ftype, Any),
                 Field(default_factory=model_fields[key].default)
-                if callable(model_fields[key].default) else model_fields[key].default,
-                choices
+                if callable(model_fields[key].default)
+                else model_fields[key].default,
+                choices,
             )
         return rv
 
     def build_schema_from_parser(
-        self,
-        module: RESTModule,
-        parser: Parser,
-        model_fields: Optional[Dict[str, Any]] = None
+        self, module: RESTModule, parser: Parser, model_fields: Optional[Dict[str, Any]] = None
     ) -> Tuple[Dict[str, Any], Type[BaseModel]]:
-        model_fields = model_fields or {
-            key: module.model.table[key]
-            for key in module.model._instance_()._fieldset_all
-        }
-        fields, hints_check = self.fields_from_model(
-            module.model, model_fields, parser.attributes
-        ), set()
-        for key, defdata in getattr(parser, '_openapi_def_fields', {}).items():
+        model_fields = model_fields or {key: module.model.table[key] for key in module.model._instance_()._fieldset_all}
+        fields, hints_check = self.fields_from_model(module.model, model_fields, parser.attributes), set()
+        for key, defdata in getattr(parser, "_openapi_def_fields", {}).items():
             if isinstance(defdata, (list, tuple)):
                 type_hint, type_default = defdata
             else:
@@ -447,27 +369,19 @@ class OpenAPIGenerator:
         return build_schema_from_fields(module, fields, hints_check)
 
     def build_schema_from_serializer(
-        self,
-        module: RESTModule,
-        serializer: Serializer,
-        model_fields: Optional[Dict[str, Any]] = None
+        self, module: RESTModule, serializer: Serializer, model_fields: Optional[Dict[str, Any]] = None
     ) -> Tuple[Dict[str, Any], Type[BaseModel]]:
-        model_fields = model_fields or {
-            key: module.model.table[key]
-            for key in module.model._instance_()._fieldset_all
-        }
-        fields, hints_check = self.fields_from_model(
-            module.model, model_fields, serializer.attributes
-        ), set()
+        model_fields = model_fields or {key: module.model.table[key] for key in module.model._instance_()._fieldset_all}
+        fields, hints_check = self.fields_from_model(module.model, model_fields, serializer.attributes), set()
         for key in serializer._attrs_override_:
-            type_hint = get_type_hints(getattr(serializer, key)).get('return', Any)
+            type_hint = get_type_hints(getattr(serializer, key)).get("return", Any)
             type_hint_opt = False
             for type_arg in getattr(type_hint, "__args__", []):
                 if issubclass(type_arg, type(None)):
                     type_hint_opt = True
             fields[key] = (type_hint, None if type_hint_opt else ...)
             hints_check.add(key)
-        for key, defdata in getattr(serializer, '_openapi_def_fields', {}).items():
+        for key, defdata in getattr(serializer, "_openapi_def_fields", {}).items():
             if isinstance(defdata, (list, tuple)):
                 type_hint, type_default = defdata
             else:
@@ -479,92 +393,66 @@ class OpenAPIGenerator:
 
     def build_definitions(self, module: RESTModule) -> Dict[str, Any]:
         serializers, parsers = {}, {}
-        model_fields = {
-            key: module.model.table[key]
-            for key in module.model._instance_()._fieldset_all
-        }
+        model_fields = {key: module.model.table[key] for key in module.model._instance_()._fieldset_all}
         for serializer_name, serializer in {
             "__default__": module.serializer,
-            **module._openapi_specs["serializers"]
+            **module._openapi_specs["serializers"],
         }.items():
             if serializer in serializers:
                 continue
             data = serializers[serializer] = {}
-            serializer_schema, serializer_model = self.build_schema_from_serializer(
-                module, serializer, model_fields
-            )
-            data.update(
-                name=serializer_name,
-                model=serializer_model,
-                schema=serializer_schema
-            )
+            serializer_schema, serializer_model = self.build_schema_from_serializer(module, serializer, model_fields)
+            data.update(name=serializer_name, model=serializer_model, schema=serializer_schema)
 
-        for parser_name, parser in {
-            "__default__": module.parser,
-            **module._openapi_specs["parsers"]
-        }.items():
+        for parser_name, parser in {"__default__": module.parser, **module._openapi_specs["parsers"]}.items():
             if parser in parsers:
                 continue
             data = parsers[parser] = {}
-            parser_schema, parser_model = self.build_schema_from_parser(
-                module, parser, model_fields
-            )
-            data.update(
-                name=parser_name,
-                model=parser_model,
-                schema=parser_schema
-            )
+            parser_schema, parser_model = self.build_schema_from_parser(module, parser, model_fields)
+            data.update(name=parser_name, model=parser_model, schema=parser_schema)
 
         return {
             "module": module.name,
             "model": module.model.__name__,
             "serializers": serializers,
             "parsers": parsers,
-            "schema": serializers[module.serializer]["schema"]
+            "schema": serializers[module.serializer]["schema"],
         }
 
     def build_operation_metadata(
-        self,
-        module: RESTModule,
-        modules_tags: Dict[str, str],
-        route_kind: str,
-        method: str
+        self, module: RESTModule, modules_tags: Dict[str, str], route_kind: str, method: str
     ) -> Dict[str, Any]:
-        entity_name = (
-            module._openapi_specs.get("entity_name") or
-            module.name.rsplit(".", 1)[-1]
-        )
+        entity_name = module._openapi_specs.get("entity_name") or module.name.rsplit(".", 1)[-1]
         return {
             "summary": _def_summaries[route_kind].format(entity=entity_name),
             "description": _def_descriptions[route_kind].format(entity=entity_name),
             "operationId": f"{module.name}.{route_kind}.{method}".replace(".", "_"),
-            "tags": [modules_tags[module.name]]
+            "tags": [modules_tags[module.name]],
         }
 
     def build_operation_parameters(
-        self,
-        module: RESTModule,
-        path_kind: str,
-        path_params: Dict[str, Dict[str, Any]]
+        self, module: RESTModule, path_kind: str, path_params: Dict[str, Dict[str, Any]]
     ) -> List[Dict[str, Any]]:
         rv = []
         for pname, pdata in path_params.items():
-            rv.append({
-                "name": pname,
-                "in": "path",
-                "required": not pdata["optional"],
-                "schema": field_schema(
-                    ModelField(
-                        name=pname,
-                        type_=_path_param_types_map[pdata["type"]],
-                        class_validators=None,
-                        model_config=_pydantic_baseconf,
-                        required=not pdata["optional"]
-                    ),
-                    model_name_map={},
-                    ref_prefix=REF_PREFIX
-                )[0]
-            })
+            rv.append(
+                {
+                    "name": pname,
+                    "in": "path",
+                    "required": not pdata["optional"],
+                    "schema": field_schema(
+                        ModelField(
+                            name=pname,
+                            type_=_path_param_types_map[pdata["type"]],
+                            class_validators=None,
+                            model_config=_pydantic_baseconf,
+                            required=not pdata["optional"],
+                        ),
+                        model_name_map={},
+                        ref_prefix=REF_PREFIX,
+                    )[0],
+                }
+            )
         if path_kind == "index":
             rv.extend(_index_default_query_parameters(module))
         elif path_kind == "sample":
@@ -576,10 +464,7 @@ class OpenAPIGenerator:
             rv.extend(_stats_default_query_parameters(module))
         return rv
 
-    def build_operation_common_responses(
-        self,
-        path_kind: str
-    ) -> Dict[str, Any]:
+    def build_operation_common_responses(self, path_kind: str) -> Dict[str, Any]:
         rv = {}
         if path_kind in ["read", "update", "delete"]:
             rv["404"] = _def_errors["404"]
@@ -589,18 +474,14 @@ class OpenAPIGenerator:
             rv["400"] = _def_errors["400"]
         return rv
 
-    def build_index_schema(
-        self,
-        module: RESTModule,
-        item_schema: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    def build_index_schema(self, module: RESTModule, item_schema: Dict[str, Any]) -> Dict[str, Any]:
         fields = {module.list_envelope: (List[Dict[str, Any]], ...)}
         if module.serialize_meta:
             fields[module.meta_envelope] = (MetaModel, ...)
         schema, defs, nested = model_process_schema(
             create_model(f"{module.__class__.__name__}Index", **fields),
             model_name_map={MetaModel: "Meta"},
-            ref_prefix=None
+            ref_prefix=None,
         )
         schema["properties"][module.list_envelope]["items"] = item_schema
         if module.serialize_meta:
@@ -615,12 +496,10 @@ class OpenAPIGenerator:
         schema, defs, nested = model_process_schema(
             create_model(f"{module.__class__.__name__}Group", **fields),
             model_name_map={MetaModel: "Meta"},
-            ref_prefix=None
+            ref_prefix=None,
         )
         schema["properties"][module.groups_envelope]["items"] = model_process_schema(
-            GroupModel,
-            model_name_map={},
-            ref_prefix=None
+            GroupModel, model_name_map={}, ref_prefix=None
         )[0]
         schema["properties"][module.groups_envelope]["items"]["title"] = "Group"
         if module.serialize_meta:
@@ -633,7 +512,7 @@ class OpenAPIGenerator:
         schema, defs, nested = model_process_schema(
             create_model(f"{module.__class__.__name__}Stat", **fields),
             model_name_map={StatModel: "Stat"},
-            ref_prefix=None
+            ref_prefix=None,
         )
         schema["properties"]["stats"]["additionalProperties"] = defs["Stat"]
         return schema["properties"]["stats"]
@@ -643,17 +522,15 @@ class OpenAPIGenerator:
         module: RESTModule,
         modules_tags: Dict[str, str],
         serializers: Dict[Serializer, Dict[str, Any]],
-        parsers: Dict[Parser, Dict[str, Any]]
+        parsers: Dict[Parser, Dict[str, Any]],
     ) -> Dict[str, Dict[str, Dict[str, Any]]]:
         rv: Dict[str, Dict[str, Dict[str, Any]]] = {}
-        mod_name = module.name.rsplit('.', 1)[-1]
+        mod_name = module.name.rsplit(".", 1)[-1]
         entity_name = module._openapi_specs.get("entity_name") or mod_name
 
         mod_prefix: str = module.url_prefix or "/"
-        path_prefix: str = (
-            module.app._router_http._prefix_main + (
-                f"/{mod_prefix}" if not mod_prefix.startswith("/") else mod_prefix
-            )
+        path_prefix: str = module.app._router_http._prefix_main + (
+            f"/{mod_prefix}" if not mod_prefix.startswith("/") else mod_prefix
         )
 
         for path_kind in set(module.enabled_methods) & {
@@ -664,7 +541,7 @@ class OpenAPIGenerator:
             "delete",
             "sample",
             "group",
-            "stats"
+            "stats",
         }:
             path_relative, methods = module._methods_map[path_kind]
             if not isinstance(methods, list):
@@ -676,7 +553,7 @@ class OpenAPIGenerator:
             for ptype, pname in _re_path_param.findall(path_scoped):
                 path_params[pname] = {"type": ptype, "optional": False}
                 path_scoped = path_scoped.replace(f"<{ptype}:{pname}>", f"{{{pname}}}")
-            for _, ptype, pname in _re_path_param_optional.findall(path_scoped):
+            for _, _, pname in _re_path_param_optional.findall(path_scoped):
                 path_params[pname]["optional"] = True
 
             rv[path_scoped] = rv.get(path_scoped) or {}
@@ -685,96 +562,54 @@ class OpenAPIGenerator:
             parser_obj = module._openapi_specs["parsers"].get(path_kind, module.parser)
 
             for method in methods:
-                operation = self.build_operation_metadata(
-                    module, modules_tags, path_kind, method
-                )
-                operation_parameters = self.build_operation_parameters(
-                    module, path_kind, path_params
-                )
+                operation = self.build_operation_metadata(module, modules_tags, path_kind, method)
+                operation_parameters = self.build_operation_parameters(module, path_kind, path_params)
                 operation_responses = self.build_operation_common_responses(path_kind)
                 if operation_parameters:
                     operation["parameters"] = operation_parameters
-                if (
-                    path_kind in ["create", "update"] or (
-                        path_kind == "delete" and
-                        "delete" in module._openapi_specs["parsers"]
-                    )
+                if path_kind in ["create", "update"] or (
+                    path_kind == "delete" and "delete" in module._openapi_specs["parsers"]
                 ):
                     operation["requestBody"] = {
-                        "content": {
-                            "application/json": {
-                                "schema": parsers[parser_obj]["schema"]
-                            }
-                        }
+                        "content": {"application/json": {"schema": parsers[parser_obj]["schema"]}}
                     }
                 if path_kind in ["create", "read", "update"]:
                     serializer_obj = module._openapi_specs["serializers"][path_kind]
                     response_code = "201" if path_kind == "create" else "200"
-                    descriptions = {
-                        "create": "Resource created",
-                        "read": "Resource",
-                        "update": "Resource updated"
-                    }
+                    descriptions = {"create": "Resource created", "read": "Resource", "update": "Resource updated"}
                     operation_responses[response_code] = {
                         "description": descriptions[path_kind],
-                        "content": {
-                            "application/json": {
-                                "schema": serializers[serializer_obj]["schema"]
-                            }
-                        }
+                        "content": {"application/json": {"schema": serializers[serializer_obj]["schema"]}},
                     }
                 elif path_kind in ["index", "sample"]:
                     operation_responses["200"] = {
-                        "description": (
-                            "Resource list" if path_kind == "index" else
-                            "Resource random list"
-                        ),
+                        "description": ("Resource list" if path_kind == "index" else "Resource random list"),
                         "content": {
                             "application/json": {
-                                "schema": self.build_index_schema(
-                                    module,
-                                    serializers[serializer_obj]["schema"]
-                                )
+                                "schema": self.build_index_schema(module, serializers[serializer_obj]["schema"])
                             }
-                        }
+                        },
                     }
                 elif path_kind == "delete":
                     operation_responses["200"] = {
                         "description": "Resource deleted",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "properties": {}
-                                }
-                            }
-                        }
+                        "content": {"application/json": {"schema": {"type": "object", "properties": {}}}},
                     }
                 elif path_kind == "group":
                     operation_responses["200"] = {
                         "description": "Resource groups",
-                        "content": {
-                            "application/json": {
-                                "schema": self.build_group_schema(module)
-                            }
-                        }
+                        "content": {"application/json": {"schema": self.build_group_schema(module)}},
                     }
                 elif path_kind == "stats":
                     operation_responses["200"] = {
                         "description": "Resource stats",
-                        "content": {
-                            "application/json": {
-                                "schema": self.build_stats_schema(module)
-                            }
-                        }
+                        "content": {"application/json": {"schema": self.build_stats_schema(module)}},
                     }
                 if operation_responses:
                     operation["responses"] = operation_responses
                 rv[path_scoped][method] = operation
 
-        for path_name, path_target, path_data in (
-            module._openapi_specs["additional_routes"]
-        ):
+        for path_name, path_target, path_data in module._openapi_specs["additional_routes"]:
             methods = path_data.methods
             for path_relative in path_data.paths:
                 path_scoped: str = path_prefix + path_relative
@@ -783,10 +618,8 @@ class OpenAPIGenerator:
                 path_params = {}
                 for ptype, pname in _re_path_param.findall(path_scoped):
                     path_params[pname] = {"type": ptype, "optional": False}
-                    path_scoped = path_scoped.replace(
-                        f"<{ptype}:{pname}>", f"{{{pname}}}"
-                    )
-                for _, ptype, pname in _re_path_param_optional.findall(path_scoped):
+                    path_scoped = path_scoped.replace(f"<{ptype}:{pname}>", f"{{{pname}}}")
+                for _, _, pname in _re_path_param_optional.findall(path_scoped):
                     path_params[pname]["optional"] = True
 
                 rv[path_scoped] = rv.get(path_scoped) or {}
@@ -794,98 +627,47 @@ class OpenAPIGenerator:
                 for method in methods:
                     operation = {
                         "summary": getattr(
-                            path_target,
-                            "_openapi_desc_summary",
-                            f"{{name}} {path_name.rsplit('.', 1)[-1]}"
+                            path_target, "_openapi_desc_summary", f"{{name}} {path_name.rsplit('.', 1)[-1]}"
                         ).format(name=entity_name),
-                        "description": getattr(
-                            path_target,
-                            "_openapi_desc_description",
-                            ""
-                        ).format(name=entity_name),
+                        "description": getattr(path_target, "_openapi_desc_description", "").format(name=entity_name),
                         "operationId": f"{path_name}.{method}".replace(".", "_"),
-                        "tags": [modules_tags[module.name]]
+                        "tags": [modules_tags[module.name]],
                     }
-                    operation_parameters = self.build_operation_parameters(
-                        module, "custom", path_params
-                    )
+                    operation_parameters = self.build_operation_parameters(module, "custom", path_params)
                     operation_responses = {}
                     if operation_parameters:
                         operation["parameters"] = operation_parameters
 
-                    operation_request = getattr(
-                        path_target, "_openapi_def_request", None
-                    )
+                    operation_request = getattr(path_target, "_openapi_def_request", None)
                     if operation_request:
-                        schema = build_schema_from_fields(
-                            module,
-                            operation_request["fields"]
-                        )[0]
+                        schema = build_schema_from_fields(module, operation_request["fields"])[0]
                         for file_param in operation_request["files"]:
-                            schema["properties"][file_param] = {
-                                "type": "string",
-                                "format": "binary"
-                            }
-                        operation["requestBody"] = {
-                            "content": {
-                                operation_request["content"]: {
-                                    "schema": schema
-                                }
-                            }
-                        }
+                            schema["properties"][file_param] = {"type": "string", "format": "binary"}
+                        operation["requestBody"] = {"content": {operation_request["content"]: {"schema": schema}}}
                     else:
-                        parser = getattr(
-                            path_target, "_openapi_def_parser", module.parser
-                        )
+                        parser = getattr(path_target, "_openapi_def_parser", module.parser)
                         if parser in parsers:
                             schema = parsers[parser]["schema"]
                         else:
                             schema = self.build_schema_from_parser(module, parser)[0]
-                        operation["requestBody"] = {
-                            "content": {
-                                "application/json": {
-                                    "schema": schema
-                                }
-                            }
-                        }
+                        operation["requestBody"] = {"content": {"application/json": {"schema": schema}}}
 
                     operation_responses = {}
-                    defined_responses = getattr(
-                        path_target, "_openapi_def_responses", None
-                    )
+                    defined_responses = getattr(path_target, "_openapi_def_responses", None)
                     if defined_responses:
                         for status_code, defined_response in defined_responses.items():
-                            schema = build_schema_from_fields(
-                                module,
-                                defined_response["fields"]
-                            )[0]
+                            schema = build_schema_from_fields(module, defined_response["fields"])[0]
                             operation_responses[status_code] = {
-                                "content": {
-                                    defined_response["content"]: {
-                                        "schema": schema
-                                    }
-                                }
+                                "content": {defined_response["content"]: {"schema": schema}}
                             }
                     else:
-                        serializer = getattr(
-                            path_target, "_openapi_def_serializer", module.serializer
-                        )
+                        serializer = getattr(path_target, "_openapi_def_serializer", module.serializer)
                         if serializer in serializers:
                             schema = serializers[serializer]["schema"]
                         else:
-                            schema = self.build_schema_from_serializer(
-                                module, serializer
-                            )[0]
-                        operation_responses["200"] = {
-                            "content": {
-                                "application/json": {
-                                    "schema": schema
-                                }
-                            }
-                        }
-                    defined_resp_errors = getattr(
-                        path_target, "_openapi_def_response_codes", []
-                    )
+                            schema = self.build_schema_from_serializer(module, serializer)[0]
+                        operation_responses["200"] = {"content": {"application/json": {"schema": schema}}}
+                    defined_resp_errors = getattr(path_target, "_openapi_def_response_codes", [])
                     for status_code in defined_resp_errors:
                         operation_responses[status_code] = _def_errors[status_code]
 
@@ -909,14 +691,7 @@ class OpenAPIGenerator:
             #     "name": module.name,
             #     "description": module.name.split(".")[-1].title()
             # })
-            paths.update(
-                self.build_paths(
-                    module,
-                    self.modules_tags,
-                    defs["serializers"],
-                    defs["parsers"]
-                )
-            )
+            paths.update(self.build_paths(module, self.modules_tags, defs["serializers"], defs["parsers"]))
             definitions[module.name] = defs
         if definitions and produce_schemas:
             components["schemas"] = {
@@ -948,7 +723,7 @@ def build_schema(
     contact: Optional[Dict[str, Union[str, Any]]] = None,
     license_info: Optional[Dict[str, Union[str, Any]]] = None,
     security_schemes: Optional[Dict[str, Any]] = None,
-    generator_cls: Optional[Type[OpenAPIGenerator]] = None
+    generator_cls: Optional[Type[OpenAPIGenerator]] = None,
 ) -> Dict[str, Any]:
     generator_cls = generator_cls or OpenAPIGenerator
     generator = generator_cls(
@@ -963,6 +738,6 @@ def build_schema(
         terms_of_service=terms_of_service,
         contact=contact,
         license_info=license_info,
-        security_schemes=security_schemes
+        security_schemes=security_schemes,
     )
     return generator(produce_schemas=produce_schemas)

@@ -8,8 +8,8 @@ __pycache__
 
 build/*
 dist/*
-Emmett_REST.egg-info/*
-poetry.lock
+*.egg-info/*
+uv.lock
 
 tests/databases/*
 tests/logs/*
